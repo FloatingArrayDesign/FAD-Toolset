@@ -1,0 +1,36 @@
+--- MoorPy Soil Input File ---
+nGridX 21
+nGridY 21
+	0	500	1000	1500	2000	2500	3000	3500	4000	4500	5000	5500	6000	6500	7000	7500	8000	8500	9000	9500	10000
+0	hummock	hummock	hummock	hummock	hummock	complex	mud	sand	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+500	hummock	hummock	hummock	hummock	hummock	complex	mud	sand	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+1000	hummock	hummock	hummock	hummock	sand	hummock	hummock	sand	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+1500	hummock	hummock	hummock	hummock	hummock	mud	hummock	sand	hummock	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+2000	hummock	hummock	hummock	mud	sand	mud	hummock	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+2500	sand	sand	sand	mud	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+3000	mud	mud	mud	sand	mud	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+3500	hummock	hummock	hummock	mud	mud	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+4000	hummock	hummock	hummock	mud	mud	mud	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+4500	sand	sand	sand	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+5000	sand	sand	sand	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+5500	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+6000	sand	sand	sand	hummock	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+6500	sand	sand	sand	sand	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+7000	mud	mud	mud	hummock	hummock	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+7500	mud	mud	mud	sand	sand	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+8000	sand	sand	sand	mud	hummock	hummock	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+8500	sand	sand	sand	mud	sand	mud	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+9000	hummock	hummock	hummock	sand	sand	sand	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+9500	sand	sand	sand	sand	mud	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+10000	sand	sand	sand	sand	sand	sand	sand	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud	mud
+--- SOIL TYPES ---
+Class 		Gamma 	 Su0 	k	alpha	phi	UCS	Em	
+(name) 	      (kN/m^3)  (kPa) 	(kPa/m) (-) 	(deg) 	(MPa) 	(MPa)
+mud	4.7	2.39	1.41	0.7	-	-	-
+mud_firm	4.7	23.94	2.67	0.7	-	-	-
+rock	-	-	-	-	-	7	50
+gravel	6	15	2	0.6	-	-	-
+sand	5.5	10	1.5	0.6	-	-	-
+complex	6.5	20	3	0.7	-	-	-
+hummock	5	5	1	0.5	-	-	-
+------------------

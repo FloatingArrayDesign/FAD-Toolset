@@ -34,15 +34,16 @@ better suit the scope and emphasis of floating wind arrays. The sections are as 
 * [Platform(s)                       ](#platforms)
 * [Mooring                           ](#mooring)
   * [Mooring Systems                 ](#mooring-systems)
-  * [Mooring line configurations     ](#mooring-line-configurations)
-  * [Mooring line section properties ](#mooring-line-section-properties)
+  * [Mooring Line Configurations     ](#mooring-line-configurations)
+  * [Mooring Line Section Properties ](#mooring-line-section-properties)
   * [Mooring Connectors              ](#mooring-connectors)
-  * [Anchor types                    ](#anchor-types)
+  * [Anchor Types                    ](#anchor-types)
 * [Cables                            ](#cables)
   * [Top Level Cables                ](#top-level-cables)
   * [Dynamic Cable Configurations    ](#dynamic-cable-configurations)
   * [Cable Cross Sectional Properties](#cable-cross-sectional-properties)
   * [Cable Appendages                ](#cable-appendages)
+* [Property Scaling Coefficients     ](#property-scaling-coefficients) 
 
 The Array sections ([Array Layout](#array-layout), [Array Mooring](#array-mooring), and [Array Cables](#array-cables)) describe the location and connections of components in the array, such as platforms, moorings, and cables. They also reference indexes or names of component designs that are described in other parts of the ontology.
 
@@ -878,3 +879,22 @@ product. These appendages are used in the
     bend_stiffener:
         mass: 5000
 ```
+
+## Property Scaling Coefficients
+
+This section allows specification of custom scaling coefficients for the
+properties of mooring lines, power cables, and buoyancy modules. For each,
+scaling coefficients can be provided in a dictionary format, or a yaml filename
+can be provided from which the scaling coefficients will be loaded (as
+illustrated below).
+
+```yaml
+ property_scaling_coefficients:
+    lineProps : custom_line_scaling_coefficients.yaml
+    cableProps : custom_power_scaling_scaling_coefficients.yaml
+    buoyProps : custom_buoyancy_module_scaling_coefficients.yaml
+```
+
+For information about the dictionary/yaml format, see the documentation of the
+mooring and cables sections. 
+

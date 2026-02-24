@@ -26,7 +26,7 @@ from famodel.substation.substation import Substation
 from famodel.cables.cable import Cable
 from famodel.cables.dynamic_cable import DynamicCable
 from famodel.cables.static_cable import StaticCable
-from famodel.cables.cable_properties import getCableProps, getBuoyProps, loadCableProps,loadBuoyProps
+from famodel.cables.cable_properties import getCableProps, getBuoyProps, loadCableProps, loadBuoyProps
 from famodel.cables.components import Joint, Jtube
 from famodel.platform.fairlead import Fairlead
 from famodel.turbine.turbine import Turbine
@@ -62,7 +62,7 @@ class Project():
             information describing the project, following the ontology.
         '''
         
-        # ----- design information -----
+        # ----- initialize design data with empty or default values -----
         
         # higher-level design data structures
         self.nPtfm  = 0  # number of floating platforms
@@ -70,6 +70,8 @@ class Project():
         self.coords = np.zeros([self.nPtfm+self.nAnch, 2]) # x-y coordinate table of platforms and anchors
         
         # more detailed design data structures for submodels
+        self.ms  = None  # MoorPy system associated with the project
+        self.RAFTDict = None  # RAFTDict associated with the project
         self.array = None  # RAFT model for dynamics analysis
         self.flow = None  # FLORIS interface instance for wake analysis
         
@@ -89,17 +91,25 @@ class Project():
         self.anchorTypes = None
         self.cableTypes = None
         
+        # Property scaling coefficients (load defaults to start)
+        self.lineProps  = loadLineProps( 'default')  # mooring line
+        self.cableProps = loadCableProps('default')  # power cable
+        self.buoyProps  = loadBuoyProps( 'default')  # buoyancy module (for cable)
         
-        # ----- site information -----
+        
+        # ----- initialize site data with empty or default values  -----
+        if lat != 0 or lon != 0:  
+            print('Warning: Project lat and lon input parameters will be deprecated. Use the YAML file instead.')
         self.lat0  = lat  # lattitude of site reference point [deg]
         self.lon0  = lon  # longitude of site reference point [deg]
         self.g = 9.81
         self.rho_water = 1025 # density of water (default to saltwater) [kg/m^3]
         self.rho_air = 1.225 # density of air [kg/m^3]
         self.mu_air = 1.81e-5 # dynamic viscosity of air [Pa*s]
+        # note: the above are global defaults that may be replaced in loadSite
+        
         self.marine_growth = None
         self.marine_growth_buoys = None
-        self.lineProps = loadLineProps('default') # moorprops file dictionary
 
         # Project boundary (vertical stack of x,y coordinate pairs [m])
         self.boundary = np.zeros([0,2])
@@ -126,11 +136,6 @@ class Project():
         self.soil_x     = None
         self.soil_y     = None
         
-        # MoorPy system associated with the project
-        self.ms  = None
-        
-        # RAFTDict associated with the project
-        self.RAFTDict = None
         
         # ----- if an input file has been passed, load it -----
         if file:
@@ -171,7 +176,10 @@ class Project():
         
         # look for design section
         # call load design method
-        self.loadDesign(project,raft=raft)
+        if 'design' in project:  # Feb 2026: a separate 'design' section in the yaml
+            self.loadDesign(project['design'], raft=raft)
+        else:
+            self.loadDesign(project, raft=raft)
         
         
     
@@ -185,13 +193,26 @@ class Project():
         
         print('Loading design')
         # standard function to load dict if input is yaml
-        if not isinstance(d,dict):#if the input is not a dictionary, it is a yaml
-            self.load(d)#load yaml into dictionary
-        #d = 
+        if not isinstance(d, dict):
+            raise Exception('loadDesign currently expects a dictionary to be provided.')
         
         # ===== load FAM-specific model parts =====
         
-        # array table
+        # ----- property scaling coefficients -----
+        if 'property_scaling_coefficients' in d:  # if the section exists
+            props = d['property_scaling_coefficients']
+            
+            # Use any property scaling coefficient sets that are provided
+            if 'lineProps'  in props: 
+                self.lineProps  = loadLineProps( props['lineProps' ])
+            if 'cableProps' in props: 
+                self.cableProps = loadCableProps(props['cableProps'])
+            if 'buoyProps'  in props: 
+                self.buoyProps  = loadBuoyProps( props['buoyProps' ])
+        
+        
+        # ----- Array table -----
+        
         arrayInfo = []
         if 'array' in d and d['array']['data']:
             arrayInfo = [dict(zip(d['array']['keys'], row)) for row in d['array']['data']]
@@ -222,8 +243,7 @@ class Project():
                 arrayInfo.append({'ID':'fowt'+str(i), 'topsideID':topID, 'platformID':pfID,
                                   'mooringID':moorID, 'x_location':outx[i], 'y_location':outy[i],
                                   'heading_adjust':pfhead})
-            
-            
+        
         
         # cable types
         
@@ -935,7 +955,10 @@ class Project():
         
         for pf in self.platformList.values():
             pf.setPosition(pf.r, project=self)
+        
+        
         # ===== load RAFT model parts =====
+        
         # load info into RAFT dictionary and create RAFT model
         if raft:
             # load turbine dictionary into RAFT dictionary
@@ -992,12 +1015,14 @@ class Project():
         dir : optional directory of main yaml file'''
         # standard function to load dict if input is yaml
         
-        # load general information
-        self.depth = getFromDict(site['general'], 'water_depth', default=self.depth)
-        self.rho_water = getFromDict(site['general'], 'rho_water', default=1025.0)
-        self.rho_air = getFromDict(site['general'], 'rho_air', default=1.225)
-        self.mu_air = getFromDict(site['general'], 'mu_air', default=1.81e-5)
-        
+        # load general information (these overwrite init defaults if provided)
+        gen = site['general']
+        if 'lat0' in gen:  self.lat0  = float(gen['lat0'])
+        if 'lon0' in gen:  self.lon0  = float(gen['lon0'])
+        if 'depth' in gen: self.depth = float(gen['water_depth'])
+        if 'rho_water' in gen: self.rho_water = float(gen['rho_water'])
+        if 'rho_air' in gen:  self.rho_air = float(gen['rho_air'])
+        if 'mu_air' in gen:   self.mu_air = float(gen['mu_air'])
         
         # load bathymetry information, if provided
         if 'bathymetry' in site and site['bathymetry']:
@@ -1735,6 +1760,7 @@ class Project():
         ends = np.array([endA, endB])
         isplatform = [isinstance(end, Platform) for end in ends]
         id_part = [end.id for end in ends[isplatform]]
+        
         # create id for mooring line if needed
         if id==None:
             alph = list(string.ascii_lowercase)
@@ -2051,7 +2077,8 @@ class Project():
                 
                 if not 'cable_type' in cd:
                     if not cd['A'] in cabProps.keys():
-                        cabProps[cd['A']] = getCableProps(connDict[i]['conductor_area'],cableType_def,cableProps=cp)
+                        cabProps[cd['A']] = getCableProps(connDict[i]['conductor_area'], 
+                            cableType_def, cableProps=self.cableProps)
                     # fix units
                     cabProps[cd['A']]['power'] = cabProps[cd['A']]['power']*1e6
                     cd['cable_type'] = cabProps[cd['A']]
@@ -4893,13 +4920,8 @@ class Project():
                 cables[-1]['routing_x_y_r'] = coords
             if burial:
                 cables[-1]['burial'] = burial
-                
-            
-            
         
         
-            
-         
         # create master output dictionary for yaml
         if arrayMoor:
             arrayMooring = {'anchor_keys':anchKeys, 'anchor_data':arrayAnch,
@@ -4921,11 +4943,13 @@ class Project():
         output = cleanDataTypes(output, convert_lists=True)
         import ruamel.yaml
         yaml = ruamel.yaml.YAML()
+        yaml.indent(mapping=2, sequence=4, offset=2)  # to indent list items with "  - "
         
         # write out to file
         with open(file,'w') as f:    
             yaml.dump(output,f)
-        
+    
+    
     def extractFarmInfo(self, cmax=5, fmax=10/6, Cmeander=1.9, force=1.95e6, direction=0.0, retainForce=False):
         '''
         Function to extract farm-level information required to create FAST.Farm case simulations. [Under developement]:

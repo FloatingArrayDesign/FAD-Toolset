@@ -612,7 +612,8 @@ def getCableDesign(connVal, cableType_def, cableConfig, configType, depth=None):
 def getDynamicCables(cable_config, cable_types, cable_appendages, depth, 
                      rho_water=1025, g=9.81):
     '''
-    Create cable design dictionary
+    Create cable design dictionary for a dynamic power cable based on
+    information from a yaml.
 
     Parameters
     ----------
@@ -640,7 +641,7 @@ def getDynamicCables(cable_config, cable_types, cable_appendages, depth,
     
     cCondd = {'appendages':[]}
     jCondd = {}
-
+    
     if cable_config:
         cCondd['span'] = cable_config['span']
         cCondd['L'] = cable_config['length']
@@ -866,7 +867,8 @@ def MooringProps(mCon, lineTypes, rho_water, g, lineProps, checkType=1):
     return(deepcopy(dd))
 
 def getMoorings(lcID, lineConfigs, connectorTypes, pfID, proj, lineProps):
-    '''
+    '''Parse dictionary information from a project yaml and already set-up
+    data structures to create the design dictionary for a Mooring.
 
     Parameters
     ----------
@@ -1035,7 +1037,7 @@ def getMoorings(lcID, lineConfigs, connectorTypes, pfID, proj, lineProps):
     return(dd) #, c_config)
 
     
-
+""" (not ever used)
 def getConnectors(c_config, mName, proj):
     '''
 
@@ -1064,7 +1066,7 @@ def getConnectors(c_config, mName, proj):
         elif c_config[i]:
             # create connector object with c_config entries
             proj.mooringList[mName].dd['connectors'].append(Connector(**c_config[i]))
-
+"""
 def getAnchors(lineAnch, arrayAnchor, proj):
     '''Create anchor design dictionary based on a given anchor type
 
@@ -1725,6 +1727,7 @@ def getFromDict(dict, key, shape=0, dtype=float, default=None, index=None):
         The default value to fill in if the item isn't in the dictionary. 
         Otherwise will raise error if the key doesn't exist. It may be a list
         (to be tiled shape times if shape > 1) but may not be a numpy array.
+    index : <<<
     '''
     # in future could support nested keys   if type(key)==list: ...
 
@@ -1786,6 +1789,7 @@ def getFromDict(dict, key, shape=0, dtype=float, default=None, index=None):
                     return np.tile(default, shape)
                 else:
                     return np.tile(default, [shape, 1])
+
 
 def updateYAML_array(fname,outx,outy,turbID,pfID,moorID,hadjust,newFile):
     '''
@@ -1994,7 +1998,8 @@ def updateYAML_mooring(fname,ms,newfile):
 
 # >>>>> A couple temporary functions for improving subsystem loading in layout >>>>>
 
-def getMooringsHacked(lcID, lineConfigs, connectorTypes, lineTypes, lineProps=None, depth=0, rFair=0, zFair=0):
+def getMooringsHacked(lcID, lineConfigs, connectorTypes, lineTypes, 
+        lineProps=None, depth=0, rFair=0, zFair=0):
     '''Temporary modified version of getMoorings that doesn't need a Project object.
 
     Parameters

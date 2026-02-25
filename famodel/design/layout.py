@@ -242,14 +242,14 @@ class Layout(Project):
         self.boundary_sh = sh.Polygon(self.boundary)
         
         # set up any interior sub boundaries (useful for mulitple separate uniform grids)
-        self.sub_boundary_coords = getFromDict(kwargs, 'sub_boundary_coords', shape=-1, 
+        sub_boundary_coords = getFromDict(kwargs, 'sub_boundary_coords', shape=-1, 
                                                default = [])
-        self.sub_boundary = []
-        self.sub_boundary_sh = []
+        self.sub_boundary = []  # list of sub-boundary coordinate tables (not used outside this method? <<<)
+        self.sub_boundary_sh = []  # list of sub-boundary Shapely polygons
         self.sub_boundary_centroid = []
         self.sub_boundary_centroid_x = []
         self.sub_boundary_centroid_y = []
-        for subb in self.sub_boundary_coords:
+        for subb in sub_boundary_coords:
             subb = np.array(subb)
             # save as project sub boundaries
             self.sub_boundary.append(np.vstack([[subb[i,0],subb[i,1]] for i in range(len(subb))]))
@@ -263,6 +263,8 @@ class Layout(Project):
             self.sub_boundary_centroid.append(self.sub_boundary_sh[-1].centroid)
             self.sub_boundary_centroid_x.append(self.sub_boundary_centroid[-1].x)
             self.sub_boundary_centroid_y.append(self.sub_boundary_centroid[-1].y)
+            
+            # >>> note: maybe more things the necessary get saved to self here <<<
             
         # trim the bathymetry grid to avoid excess
         self.trim_grids = getFromDict(kwargs,'trimGrids',default=True)
@@ -549,8 +551,12 @@ class Layout(Project):
             the free layout optimization.
             
             trans_mode = 'x': Shear transformation in x direction only
-            trans_mode = 'xy': Shear transformation in x and y direction            
+            trans_mode = 'xy': Shear transformation in x and y direction    
+
+            boundary_index <<< ?
         '''
+        
+        # >>> note to add descriptions and units <<<
         grid_spacing_x = Xu[0]
         grid_spacing_y = Xu[1]
         grid_trans_x = Xu[2]
@@ -571,7 +577,7 @@ class Layout(Project):
         if self.rotation_mode:
             if len(Xu) != 7:
                 raise ValueError('If rotation mode is True, Xu[6] is turbine rotation')
-            self.turb_rot = np.radians(Xu[6])
+            turb_rot = np.radians(Xu[6])  # temporary turbine heading scalar [rad]
         
         # Check if self.grid_spacing_x/y is equal to 0, if so, set it to 1000 m
         if grid_spacing_x == 0:
@@ -597,8 +603,6 @@ class Layout(Project):
             transformation_matrix = np.array([[cos_theta, -sin_theta + tan_phi * cos_theta],
                                                [sin_theta, sin_theta*tan_phi+cos_theta]])
         
-        # Generate points in the local coordinate system
-        points = []
         
         # Lease area shape: Get min and max xy coordinates and calculate width
         min_x, min_y, max_x, max_y = boundary.bounds # self.boundary_sh.bounds
@@ -626,44 +630,72 @@ class Layout(Project):
 
         # LOCAL COORDINATE SYSTEM WITH (0,0) LEASE AREA CENTROID
         # Therefore, +/- self.boundary_centroid_y/x cover the entire area
+        
+        
+        # ----- Generate grid points in the local coordinate system -----
+        
+        points = []  # list of Shapely Point objects for each grid position
+        
         # Loop through y values within the boundary_centroid_y range with grid_spacing_y increments
         column_count = 0
-        rotations = []
-        grid_position =[]
+        turb_rot_all = []  # headings of all considered positions (some may be out of boundaries) [rad]
+        grid_position =[]  # indices of positions within the grid
+        
         for y in np.arange(-ywidth, ywidth, grid_spacing_y):
         # for y in np.arange(-bound_centroid_y-ywidth, bound_centroid_y+ywidth, grid_spacing_y):
             column_count += 1
             row_count = 0
+            
             # Loop through x values within the boundary_centroid_x range with grid_spacing_x increments
             for x in np.arange(-xwidth, xwidth, grid_spacing_x):
             # for x in np.arange(-bound_centroid_x-xwidth, bound_centroid_x+xwidth, grid_spacing_x):
                 row_count += 1
+                
                 # Apply transformation matrix to x, y coordinates
                 local_x, local_y = np.dot(transformation_matrix, [x, y])
+                
                 # Add grid translation offsets to local coordinates
                 local_x += grid_trans_x
                 local_y += grid_trans_y
+                
                 # Create a Point object representing the transformed coordinates
-                # Transform back into global coordinate system with by adding centroid to local coordinates
+                # Transform back into global coordinate system by adding centroid to local coordinates
                 point = Point(local_x + bound_centroid_x, local_y + bound_centroid_y)
                 points.append(point)
                 
+                # Assign turbine headings (alternate 180 deg if alternate_rows)
                 if self.alternate_rows:
-                    rotations.append(self.turb_rot + np.radians(180 * (column_count % 2)))
+                    turb_rot_all.append(turb_rot + np.radians(180 * (column_count % 2)))
+                else:
+                    turb_rot_all.append(turb_rot)
+                
                 #store column, row for each turbine
                 grid_position.append([column_count, row_count])
         
-        # remove points that are not in boundaries
-        bound_lines = boundary.boundary # get boundary lines for shapely analysis
-        out_lines = [bound_lines]
-        # keep only points inside bounds
-        points_ib = [pt for pt in points if (boundary.contains(pt))]
-        if self.alternate_rows:
-            self.turb_rot = [rotations[ind] for ind in range(0, len(points)) if boundary.contains(points[ind])]
-        self.grid_positions = [grid_position[ind] for ind in range(0, len(points)) if boundary.contains(points[ind])]
         
+        # ----- Remove grid points that violate any boundaries -----
+        
+        # keep only points inside bounds
+        '''  The next 3 lines check each point 3 times and are a bit complex
+        points_ib = [pt for pt in points if (boundary.contains(pt))]
+        self.turb_rot = [turb_rot_all[ind] for ind in range(0, len(points)) if boundary.contains(points[ind])]
+        self.grid_positions = [grid_position[ind] for ind in range(0, len(points)) if boundary.contains(points[ind])]
+        '''  # The alternative below is simpler code and only does a bound check once per point
+        points_ib = []  # subset of points that are inside boundaries
+        self.turb_rot = []  # headings of platforms (that are inside boundaries) [rad]
+        self.grid_positions = []  # platform positions
+        
+        for ind in range(0, len(points)):
+            if boundary.contains(points[ind]):  # check if point is within the boundaries
+                points_ib.append(points[ind])
+                self.turb_rot.append(turb_rot_all[ind])
+                self.grid_positions.append(grid_position[ind])
+        
+        
+        # remove points in exclusion zones  (note: below code may be worth checking for repetition in loop)
         points_ibe = points_ib
-        # remove points in exclusion zones
+        out_lines = [boundary.boundary]  # get boundary lines for shapely analysis
+        
         if self.exclusion_polygons_sh:
             for ie in range(len(self.exclusion)):
                 points_ibe = [pt for pt in points_ibe if not self.exclusion_polygons_sh[ie].contains(pt)]
@@ -672,7 +704,7 @@ class Layout(Project):
         return(points_ibe)
 
   
-    def pareGridPoints(self,points_ibe):
+    def pareGridPoints(self, points_ibe):
         '''
         Function to pare number of grid points down to desired amount, place oss 
         at closest grid points (if substations allowed to move) and return 
@@ -694,9 +726,9 @@ class Layout(Project):
         # determine number of points to keep (usually # turbines + # substations)
         if self.static_substations:
             # in this case, keep substations where they are
-            nt = self.nt 
+            n = self.nt  # consider only turbines
         else:
-            nt = self.nt + self.noss
+            n = self.nt + self.noss  # consider turbines and substations
         
         # create list of boundary lines from outside boundary, exclusion zones, and inner boundaries
         out_lines = [self.boundary_sh.boundary]
@@ -706,74 +738,95 @@ class Layout(Project):
         for ie in range(len(self.exclusion)):
             out_lines.append(self.exclusion_polygons_sh[ie].boundary)
         
-        lines = MultiLineString(out_lines)
-        point_dists = [pt.distance(lines) for pt in points_ibe] # get min dist between bounds and each point
-        points_ibe = np.array(points_ibe)
+        # Combine all boundary polygons into one Shapely object
+        all_boundaries = MultiLineString(out_lines)
+        
+        # Find closest distance of each turbine/point to the boundaries
+        point_dists = [pt.distance(all_boundaries) for pt in points_ibe] 
+        
+        #points_ibe = np.array(points_ibe)
+        n_ibe = len(points_ibe)  # number of input points
+        
         # get indices of sorting by descending minimum distance
-        points_sorted_idx = [int(ind) for ind in np.flip(np.argsort(point_dists,kind='stable'))]
-        furthest_points = list([points_ibe[i] for i in range (0, len(points_ibe)) if i in points_sorted_idx[:nt]]) # pull out the points that are furthest from bounds
-        self.grid_positions = list(self.grid_positions[i] for i in range (0, len(points_ibe)) if i in points_sorted_idx[:nt])
-        if self.alternate_rows:
-            furthest_rotations = list(self.turb_rot[i] for i in range (0, len(points_ibe)) if i in points_sorted_idx[:nt]) 
-
+        points_sorted_idx = np.flip(np.argsort(point_dists, kind='stable'))
+        
+        # ----- Pare down to the n points furthest inside the boundaries -----
+        
+        pared_points = []  # subset of points that are inside boundaries
+        pared_turb_rot = []  # headings of platforms (that are inside boundaries) [rad]
+        pared_grid_positions = []  # platform positions
+        
+        for i in range (0, n_ibe):  # go through grid points in order of grid position
+            if i in points_sorted_idx[:n]:  # use n of them that are farthest from boundaries
+                # note: using "for i in points_sorted_idx[:n]" would order by farthest first
+                
+                pared_points.append(points_ibe[i])
+                pared_turb_rot.append(self.turb_rot[i])
+                pared_grid_positions.append(self.grid_positions[i])  #<<< should decide whether list or array
+        
         
         # add points outside lease area if more points are needed
         min_x, min_y, max_x, max_y = self.boundary_sh.bounds
-        if len(points_sorted_idx)< nt:
+        if len(points_sorted_idx) < n:
+            
             # determine remaining number of turbines to add
-            leftover = nt-len(points_sorted_idx)
+            n_leftover = n - len(points_sorted_idx)
+            
             # choose point outside bounds for leftovers
             leftover_loc = Point(min_x-1,min_y-1)
-            furthest_points.extend([leftover_loc]*leftover)
-            if self.alternate_rows:
-                furthest_rotations.extend([0]*leftover)
             
+            # Add the remaining necessary points (dummy values)
+            pared_points.extend([leftover_loc]*n_leftover)
+            pared_turb_rot.extend([0]*n_leftover)
+            pared_grid_positions.extend([[0,0]]*n_leftover)
+        
+        
         # put substation(s) in place closest to oss_coords if substations can move
         if not self.static_substations:
             for oo in range(self.noss):
-                # make a multipoint fro
-                turb_multipoint = sh.MultiPoint(furthest_points)
+                
+                # make a multipoint from the working set of grid points
+                turb_multipoint = sh.MultiPoint(pared_points)
                 oss_point_start = Point(self.oss_coords_initial[oo])
+                
                 # find point closest to initial oss coord & set as new oss position
                 oss_point = nearest_points(turb_multipoint,oss_point_start)[0]
+                
                 # remove turbine from new oss position (extra turbines have been placed already)
-                if oss_point in furthest_points:
-                    if self.alternate_rows:
-                        del furthest_rotations[furthest_points.index(oss_point)]
-                        
-                    index = furthest_points.index(oss_point)
-                    furthest_points.remove(oss_point)
-                    self.grid_positions.remove(self.grid_positions[index])
+                if oss_point in pared_points:
+                    oss_index = pared_points.index(oss_point)
+                    del pared_turb_rot[oss_index]
+                    del pared_points[oss_index]
+                    del pared_grid_positions[oss_index]
                     self.oss_coords[oo] = [oss_point.x, oss_point.y]
                 else:
                     print('Could not find nearby point for oss, setting oss to initial coords')
                     self.oss_coords[oo] = self.oss_coords_initial[oo]
                     
         # save points furthest from bounds into turb_coords
+        '''
         x_coords = np.array([point.x for point in furthest_points])#/1000 
         y_coords = np.array([point.y for point in furthest_points])#/1000   
         for i,coord in enumerate(self.turb_coords):
             coord[0] = x_coords[i]
             coord[1] = y_coords[i]
+        '''  # replacing above with something simpler that doesn't make extra intermediate arrays
+        for i in range(self.nt):
+            self.turb_coords[i,0] = pared_points[i].x
+            self.turb_coords[i,1] = pared_points[i].y
         
-        #update grid_positions row and column coordinates based on minimum
-        self.grid_positions = np.array(self.grid_positions)
-        self.grid_positions[:,0] = self.grid_positions[:,0] - min(self.grid_positions[:,0])
-        self.grid_positions[:,1] = self.grid_positions[:,1] - min(self.grid_positions[:,1])
+        self.turb_rot = pared_turb_rot
+        
+        #update grid_positions row and column indices to start at 0
+        pared_grid_positions = np.array(pared_grid_positions)
+        self.grid_positions =  pared_grid_positions - np.min(pared_grid_positions, axis=0)
         
         # Return Design Vector X with x,y coordinates, same as used for the free layout optimization.
-        # Coordinates in (km)
-        # This completes the interface
         if self.rotation_mode:
-            
-            if self.alternate_rows:
-                self.turb_rot = furthest_rotations
-                X = np.concatenate((self.turb_coords[:,0], self.turb_coords[:,1], self.turb_rot))
-            else:
-                X = np.concatenate((self.turb_coords[:,0], self.turb_coords[:,1], self.turb_rot*np.ones((nt))))
+            X = np.concatenate((self.turb_coords[:,0], self.turb_coords[:,1], self.turb_rot))
         else:
             X = np.concatenate((self.turb_coords[:,0], self.turb_coords[:,1]))
-
+        
         return X
     
 
@@ -2510,10 +2563,10 @@ if __name__ == '__main__':
     
     if layouttype == 'freelayout':
         res, fopt = pso(layout1.objectiveFun, lb=boundary_xy[:,0], ub=boundary_xy[:,1], f_ieqcons=layout1.constraintFuns,  
-                        swarmsize=20, omega=0.72984, phip=0.6, phig=0.8, maxiter=20, minstep=1e-8, minfunc=1e-8, debug=True)
+                        swarmsize=20, omega=0.72984, phip=0.6, phig=0.8, maxiter=2, minstep=1e-8, minfunc=1e-8, debug=True)
     elif layouttype == 'uniformgridlayout':
         res, fopt = pso(layout1.objectiveFunUG, lb=boundaries_UG[:,0], ub=boundaries_UG[:,1], f_ieqcons=layout1.constraintFunsUG,  
-                        swarmsize=20, omega=0.72984, phip=0.6, phig=0.8, maxiter=20, minstep=1e-8, minfunc=1e-8, debug=True)
+                        swarmsize=20, omega=0.72984, phip=0.6, phig=0.8, maxiter=2, minstep=1e-8, minfunc=1e-8, debug=True)
    
 
     if layouttype == 'freelayout':

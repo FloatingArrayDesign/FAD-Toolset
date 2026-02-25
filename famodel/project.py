@@ -1019,7 +1019,7 @@ class Project():
         gen = site['general']
         if 'lat0' in gen:  self.lat0  = float(gen['lat0'])
         if 'lon0' in gen:  self.lon0  = float(gen['lon0'])
-        if 'depth' in gen: self.depth = float(gen['water_depth'])
+        if 'water_depth' in gen: self.depth = float(gen['water_depth'])
         if 'rho_water' in gen: self.rho_water = float(gen['rho_water'])
         if 'rho_air' in gen:  self.rho_air = float(gen['rho_air'])
         if 'mu_air' in gen:   self.mu_air = float(gen['mu_air'])

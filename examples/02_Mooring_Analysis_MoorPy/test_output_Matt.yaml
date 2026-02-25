@@ -1,0 +1,187 @@
+site:
+  general:
+    water_depth: 202.0
+    rho_air: 1.225
+    rho_water: 1025.0
+    mu_air: 1.81e-05
+array:
+  keys: [ID, topsideID, platformID, mooringID, x_location, y_location, 
+        z_location, heading_adjust]
+  data:
+    - [fowt0, 0, 1, ms0, -1600.0, -1600.0, 0.0, 0.0]
+    - [fowt1, 0, 1, ms0, 0.0, -1600.0, 0.0, 180.0]
+    - [fowt2, 0, 1, ms0, 1600.0, -1600.0, 0.0, 0.0]
+platform:
+  type: FOWT
+  rFair: 58
+  zFair: -14
+  fairleads: []
+  JTubes: []
+topsides: []
+array_mooring: {}
+mooring_systems:
+  ms0:
+    keys: [MooringConfigID, heading, anchorType]
+    data:
+      - ['0', 150.0, drag-embedment1]
+      - ['0', 270.0, drag-embedment1]
+      - ['0', 30.0, drag-embedment1]
+mooring_line_configs:
+  '0':
+    name: '0'
+    span: 642.0
+    sections:
+      - type: 0
+        length: 497.7
+      - type: 1
+        length: 199.8
+mooring_line_types:
+  0:
+    name: 0
+    d_vol: 0.27882
+    m: 479.88020000000006
+    EA: 2053741190.7845445
+    w: 4093.6781602294
+    MBL: 20893381.207590003
+    EAd: 0.0
+    EAd_Lm: 0.0
+    d_nom: 0.1549
+    cost: 1240.4903170000002
+    notes: made with getLineProps
+    material: chain
+    Cd: 1.333
+    CdAx: 0.639
+    Ca: 1.0
+    CaAx: 0.5
+  1:
+    name: 1
+    d_vol: 0.14405282886514317
+    m: 22.491196000000002
+    EA: 142830688.0
+    w: 56.75848886217392
+    MBL: 10202192.0
+    EAd: 118345427.2
+    EAd_Lm: 40.0
+    d_nom: 0.182
+    cost: 234.650416
+    notes: made with getLineProps
+    material: polyester
+    Cd: 2.021
+    CdAx: 0.0
+    Ca: 1.1
+    CaAx: 0.15
+mooring_connector_types: {}
+anchor_types:
+  drag-embedment1:
+    type: DEA
+cables:
+  - name: array_cable0
+    endA:
+      attachID: fowt0
+      heading: 90.0
+      dynamicID: dynamic_0
+    endB:
+      attachID: fowt1
+      heading: -270.0
+      dynamicID: None
+    type: None
+  - name: array_cable1
+    endA:
+      attachID: fowt1
+      heading: -120.00000000000001
+      dynamicID: dynamic_1
+    endB:
+      attachID: fowt2
+      heading: -60.00000000000001
+      dynamicID: dynamic_1
+    type: stat_cab_1
+dynamic_cable_configs:
+  dynamic_0:
+    cable_type: dyn_cab_0
+    A: 300.0
+    span: 1512
+    length: 1500
+    voltage: 66.0
+    sections:
+      - L_mid: 510
+        N_modules: 6
+        spacing: 18
+        V: 2
+        type: buoy_0
+      - L_mid: 1040
+        N_modules: 6
+        spacing: 18
+        V: 2
+        type: buoy_0
+    rJTube: 58
+  dynamic_1:
+    cable_type: dyn_cab_0
+    A: 300.0
+    span: 195
+    length: 353.505
+    voltage: 66.0
+    sections:
+      - L_mid: 200
+        N_modules: 6
+        spacing: 11.23
+        V: 1
+        type: buoy_1
+      - type: joint_0
+    rJTube: 5
+cable_types:
+  dyn_cab_0:
+    name: dynamic_cable_66
+    m: 36.66419531336287
+    EA: 469622033.24936056
+    EI: 19916.10897643939
+    w: 155.82772548702889
+    MBL: 383237.99297699344
+    MBR: 2.4099228634059946
+    A: 300.0
+    power: 84694364.82376207
+    resistance: 0.08
+    voltage: 66.0
+    cost: 492.66999999999996
+    notes: made with getCableProps
+    d_vol: 0.1606615242270663
+  stat_cab_1:
+    name: static_cable_66
+    d: 0.15396152422706633
+    m: 30.184309210840546
+    EA: 286833696.25348383
+    EI: 7679.657270398245
+    w: 108.90750709541506
+    MBL: 183724.16055912877
+    MBR: 2.309422863405995
+    A: 300.0
+    power: 84694364.82376207
+    resistance: 0.08
+    voltage: 66.0
+    cost: 455.27
+    notes: made with getCableProps
+cable_appendages:
+  buoy_0:
+    name: Buoyancy_750m2m3
+    d: 1.5119052598738476
+    m: 960.0
+    w: -10692.9
+    cost: 20260.0
+    density: 480.0
+    volume: 2
+    l: 1.5119052598738476
+    notes: made with getBuoyProps
+    type: buoy
+  buoy_1:
+    name: Buoyancy_750m1m3
+    d: 1.2
+    m: 480.0
+    w: -5346.45
+    cost: 11670.0
+    density: 480.0
+    volume: 1
+    l: 1.2
+    notes: made with getBuoyProps
+    type: buoy
+  joint_0:
+    m: 0
+    type: joint

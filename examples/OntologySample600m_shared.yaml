@@ -492,6 +492,10 @@ mooring_connector_types:
         m   : 140    # [kg]  component mass
         v   : 0.13   # [m^3] component volumetric displacement
         
+    clump_weight_20:
+        m   : 20000  # [kg]
+        v :  0.8   # [m^3]
+        
     clump_weight_80:
         m   : 80000  # [kg]
         v   :  0.0   # [m^3]

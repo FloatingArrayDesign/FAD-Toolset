@@ -376,6 +376,9 @@ class Mooring(Edge):
         # Run custom function to update the mooring design (and anchor position)
         if self.adjuster and adjust:
             
+            #MH: >>> move adjustment settings to a contained, extensible dict and remove
+            #        hard-coded assumptions about the nature of the adjuster func <<<
+            
             #if i_line is not defined, assumed segment 0 will be adjusted
             if not hasattr(self,'i_line'):
                 self.i_line = 0
@@ -784,7 +787,8 @@ class Mooring(Edge):
                             else:
                                 print('end of parallel')
                                 breakpoint()
-
+    
+    
     def mirror(self, create_subsystem=True):
         '''
         Mirrors a half design to create a full line (symmetry assumption).

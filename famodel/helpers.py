@@ -817,8 +817,41 @@ def CableProps(cabType, cable_types, rho_water, g, checkType=1, A=None):
 
     return(deepcopy(dd))
 
+
+def ConnectorProps(cID, connectorTypes, pointProps=None):
+    '''
+    Prepare properties for a connector within a Mooring.
+    
+    Parameters
+    ----------
+    cID : string
+        Key of a connector type?
+    connectorTypes : dict
+        Dictionary of mooring line material type information in ontology yaml format
+    
+    Returns
+    -------
+    d : design dictionary for connector
+    '''
+    
+    # If connector is listed in the already loaded data, get the properties from there
+    if cID in connectorTypes:
+        d = connectorTypes[cID]
+        d['type'] = cID
+    
+    # Otherwise use the pointProps scaling dataset (work in progress)
+    else:
+        props = loadPointProps(pointProps)
+        design = {f"num_c_{cID}":1}
+        d = getPointProps(design, Props=props)
+    
+    return d
+
+
 def MooringProps(mCon, lineTypes, rho_water, g, lineProps, checkType=1):
     '''
+    Prepare properties for a mooring line section within a Mooring.
+    
     Parameters
     ----------
     mCon : dict
@@ -847,41 +880,42 @@ def MooringProps(mCon, lineTypes, rho_water, g, lineProps, checkType=1):
         # else:
         #     d_vol = dd['d']
         dd['w'] = (dd['m']-np.pi/4*d_vol**2*rho_water)*g
-        if 'MBL' in dd:
-            dd['MBL'] = float(dd['MBL'])
+        
         if 'mooringFamily' in mCon:
             raise Exception('type and moorFamily listed in yaml - use type to reference a mooring type in the mooring_line_types section of the yaml and mooringFamily to obtain mooring properties from MoorProps_default.yaml')
+    
     elif 'mooringFamily' in mCon:
         from moorpy.helpers import loadLineProps, getLineProps
         if not 'd_nom' in mCon:
             raise Exception('To use MoorProps yaml, you must specify a nominal diameter in mm for the mooring line family')
 
-        mProps = getLineProps(mCon['d_nom']*1000,mCon['mooringFamily'],lineProps=lineProps)
+        mProps = getLineProps(mCon['d_nom']*1000, mCon['mooringFamily'], lineProps=lineProps)
         dd = mProps
         dd['name'] = mCon['mooringFamily']
         dd['d_nom'] = mCon['d_nom']
-        dd['MBL'] = float(dd['MBL'])
+    
     elif 'type' in mCon and not mCon['type'] in lineTypes:
         raise Exception(f'Type {mCon["type"]} provided in mooring_line_config {mCon} is not found in mooring_line_types section. Check for errors.')
-
+    
+    if 'MBL' in dd:  dd['MBL'] = float(dd['MBL'])
+    dd['EA'] = float(dd['EA']) 
+    
     return(deepcopy(dd))
 
-def getMoorings(lcID, lineConfigs, connectorTypes, pfID, proj, lineProps):
-    '''Parse dictionary information from a project yaml and already set-up
-    data structures to create the design dictionary for a Mooring.
+
+def loadMooringConfig(line_config, connectorTypes, lineTypes, 
+        lineProps=None, depth=0, rFair=0, zFair=0, rho_water=1025, g=9.81, name=''):
+    '''Temporary modified version of getMoorings that doesn't need a Project object.
+    Create a Mooring design dictionary based on yaml inputs.
 
     Parameters
     ----------
-    lcID : str
-        ID of line configuration in ontology yaml
-    lineConfigs : dict
-        Dictionary of line configuration types described in ontology yaml format
+    line_config : dict
+        Dictionary of line configuration type described in ontology yaml format
     connectorTypes : dict
         Dictionary of connector types described in ontology yaml format
     pfID : str
         Platform object ID connected to this mooring object
-    proj : project class instance
-        Project object associated with this mooring line
 
     Returns
     -------
@@ -889,66 +923,69 @@ def getMoorings(lcID, lineConfigs, connectorTypes, pfID, proj, lineProps):
         mooring design dictionary
 
     '''
+    
+    from famodel.helpers import MooringProps
+    
     # set up dictionary of information on the mooring configurations
     dd = {'span':{},'zAnchor':{}}#,'EndPositions':{}}
+    
     # set up connector dictionary
     c_config = []
     config = [] # mooring and connector combined configuation list
                 
     lineLast = 1    # boolean whether item with index k-1 is a line. Set to 1 for first run through of for loop
-    ct = 0   # counter for number of line types
-    nsec = len(lineConfigs[lcID]['sections']) # number of sections
-    for k in range(0,nsec): # loop through each section in the line
     
-        lc = lineConfigs[lcID]['sections'][k] # set location for code clarity later
-        # determine if it's a line type or a connector listed
+    nsec = len(line_config['sections']) # number of sections
+    
+    # Go through each item (section/connector) along the line and process it
+    for k, lc in enumerate(line_config['sections']):
+        
+        # The case of a line section (with length)
         if 'type' in lc or 'mooringFamily' in lc: 
-            # this is a line
+            
             if lineLast: # previous item in list was a line (or this is the first item in a list)
                 # no connector was specified for before this line - add an empty connector
                 config.append({})
-                c_config.append({})                        
+                c_config.append({})
+            
             # set line information
-            lt = MooringProps(lc, proj.lineTypes, proj.rho_water, proj.g, 
-                              lineProps)                                             
-            # lt = self.lineTypes[lc['type']] # set location for code clarity and brevity later
+            lt = MooringProps(lc, lineTypes, rho_water, g, lineProps)
+            #lt['name'] = str(ct)+'_'+str(lt['name'])  # adjust name
+            
             # set up sub-dictionaries that will contain info on the line type
-            config.append({'type':lt})# {'name':str(ct)+'_'+lc['type'],'d_nom':lt['d_nom'],'material':lt['material'],'d_vol':lt['d_vol'],'m':lt['m'],'EA':float(lt['EA'])}})
-            config[-1]['type']['name'] = str(ct)+'_'+str(lt['name'])
-            # make EA a float not a string
-            config[-1]['type']['EA'] = float(lt['EA'])  
-            if 'MBL' in lt:
-                config[-1]['type']['MBL'] = float(lt['MBL'])
-            # set line length
-            config[-1]['L'] = lc['length']
-
+            config.append({'type':lt, 'L':lc['length']})
+            
             # update line last boolean
             lineLast = 1
-            
+        
+        # The case of a connector
         elif 'connectorType' in lc:
-            cID = lc['connectorType']
-            # this is a connector
+            #cID = lc['connectorType']
+            
             if lineLast == 0:
                 # last item in list was a connector
                 raise Exception(f"Two connectors were specified in a row for line configuration '{lcID}', please remove one of the connectors")
+            '''
             else:
-                
                 # last item in list was a line
                 if cID in connectorTypes:
                     config.append(connectorTypes[cID]) # add connector to list
                     config[-1]['type'] = cID
                 else:
                     # try pointProps
-                    try:
-                        props = loadPointProps(None)
-                        design = {f"num_c_{cID}":1}
-                        config.append(getPointProps(design, Props=props))
+                    props = loadPointProps(None)
+                    design = {f"num_c_{cID}":1}
+                    config.append(getPointProps(design, Props=props))
 
-                    except Exception as e: 
-                        raise Exception(f"Connector type {cID} not found in connector_types dictionary, and getPointProps raised the following exception:",e)
-                        
-                # update lineLast boolean
-                lineLast = 0
+                    # raise Exception(f"Connector type {cID} not found in connector_types dictionary, and getPointProps raised the following exception:",e)
+            '''
+            cdd = ConnectorProps(lc['connectorType'], connectorTypes)
+            config.append(cdd)
+                
+            # update lineLast boolean
+            lineLast = 0
+        
+        # The case of a part of the line with parallel subsections
         elif 'subsections' in lc:
             # TODO: LHS: ERROR CHECKING FOR ORDER OF COMPONENTS PROVIDED WITHIN SUBSECTIONS, ADD IN NEEDED CONNECTORS!!
             
@@ -956,12 +993,22 @@ def getMoorings(lcID, lineConfigs, connectorTypes, pfID, proj, lineProps):
                 # if this is not the first section AND last section was a line, add a empty connector first
                 config.append({})
                 lineLast = 0
+            
             config.append([])
             sublineLast = [lineLast]*len(lc['subsections']) # to check if there was a connector provided before this
+            
+            # Go through each parallel subsection
             for ii,sub in enumerate(lc['subsections']):
+                
+                # Start a list for the parallel subsections
                 config[-1].append([])
+                
+                
                 for jj,subsub in enumerate(sub):
+                    
+                    
                     if 'connectorType' in subsub and sublineLast[ii]:
+                        '''
                         cID = subsub['connectorType']
                         if cID in connectorTypes:
                             cID = subsub['connectorType']
@@ -974,19 +1021,26 @@ def getMoorings(lcID, lineConfigs, connectorTypes, pfID, proj, lineProps):
                                 config[-1][-1].append(getPointProps(design, Props=props))
                             except Exception as e: 
                                 raise Exception(f"Connector type {cID} not found in connector_types dictionary, and getPointProps raised the following exception:",e)
+                        '''
+                        cdd = ConnectorProps(subsub['connectorType'], connectorTypes)
+                        config[-1][-1].append(cdd)
+                        
                         sublineLast[ii] = 0
+                    
                     elif 'connectorType' in subsub and not sublineLast[ii]:
                         raise Exception('Previous section had a connector, two connectors cannot be listed in a row')
-                    elif 'type' or 'mooringFamily' in subsub:
+                    
+                    elif 'type' in subsub or 'mooringFamily' in subsub:
                         if sublineLast[ii]:
                             # add empty connector
                             config[-1][-1].append({})
-                        lt = MooringProps(subsub,proj.lineTypes, proj.rho_water, proj.g, lineProps)
+                        
+                        lt = MooringProps(subsub, lineTypes, rho_water, g, lineProps)
+                        
                         config[-1][-1].append({'type':lt,
                                                'L': subsub['length']})
-                        # make EA a float not a string
-                        config[-1][-1][-1]['type']['EA'] = float(lt['EA']) 
-                        config[-1][-1][-1]['type']['MBL'] = float(lt['MBL'])
+                        #MH >>> adjust name? <<<
+                        
                         sublineLast[ii] = 1
                     else:
                         raise Exception(f"keys in subsection line definitions must either be 'type', 'mooringFamily', or 'connectorType'")
@@ -1003,40 +1057,45 @@ def getMoorings(lcID, lineConfigs, connectorTypes, pfID, proj, lineProps):
             raise Exception(f"Please make sure that all section entries for line configuration '{lcID}' are either line sections (which must have a 'type' key), connectors (which must have a 'connectorType' key, or subsections")
 
     # check if line is a shared symmetrical configuration
-    if 'symmetric' in lineConfigs[lcID] and lineConfigs[lcID]['symmetric']:
+    if 'symmetric' in line_config and line_config['symmetric']:
+        
         if not lineLast: # check if last item in line config list was a connector
             for ii in range(len()):
                 # set mooring configuration 
                 config.append(config[-1-2*ii])
                 # set connector (since it's mirrored, connector B becomes connector A)
                 config.append(config[-2-2*ii])
+        
         else: # double the length of the end line
             config[-1]['L'] =config[-1]['L']*2
             # set connector B for line same as previous listed connector
             config.append(config[-1])
+            '''
             for ii in range(0,ct-1): # go through every line config except the last (since it was doubled already)
                 # set mooring configuration
                 config.append(config[-2-2*ii])
                 # set connector
                 config.append(config[-3-2*ii])
+            '''
+            
     else: # if not a symmetric line, check if last item was a line (if so need to add another empty connector)
         if lineLast:
             # add an empty connector object
             config.append({})
+    
     # set general information on the whole line (not just a section/line type)
     # set to general depth first (will adjust to depth at anchor location after repositioning finds new anchor location)
     dd['subcomponents'] = config
-    dd['zAnchor'] = -proj.depth 
-    dd['span'] = lineConfigs[lcID]['span']
-    dd['name'] = lcID
+    dd['zAnchor'] = -depth 
+    dd['span'] = line_config['span']
+    dd['name'] = name
     # add fairlead radius and depth to dictionary
-    dd['rad_fair'] = proj.platformList[pfID].rFair
-    dd['z_fair'] = proj.platformList[pfID].zFair
-    
-    
-    return(dd) #, c_config)
+    dd['rad_fair'] = rFair
+    dd['z_fair'] = zFair
+ 
+    return dd  
 
-    
+
 """ (not ever used)
 def getConnectors(c_config, mName, proj):
     '''
@@ -1095,6 +1154,7 @@ def getAnchors(lineAnch, arrayAnchor, proj):
     ad['name'] = lineAnch
     
     return(ad, mass)
+
 
 def attachFairleads(moor, end, platform, fair_ID_start=None, fair_ID=None, fair_inds=None):
     '''
@@ -1295,7 +1355,7 @@ def route_around_anchors(proj, anchor=True, cable=True, padding=50):
 
 
 
-
+#MH: >>> Consider moving next two functions to Mooring class <<<
             
 def configureAdjuster(mooring, adjuster=None, method='horizontal',
                       i_line=0, span=None, project=None, target=None):
@@ -1998,178 +2058,6 @@ def updateYAML_mooring(fname,ms,newfile):
 
 # >>>>> A couple temporary functions for improving subsystem loading in layout >>>>>
 
-def getMooringsHacked(lcID, lineConfigs, connectorTypes, lineTypes, 
-        lineProps=None, depth=0, rFair=0, zFair=0):
-    '''Temporary modified version of getMoorings that doesn't need a Project object.
-
-    Parameters
-    ----------
-    lcID : str
-        ID of line configuration in ontology yaml
-    lineConfigs : dict
-        Dictionary of line configuration types described in ontology yaml format
-    connectorTypes : dict
-        Dictionary of connector types described in ontology yaml format
-    pfID : str
-        Platform object ID connected to this mooring object
-    proj : project class instance
-        Project object associated with this mooring line
-
-    Returns
-    -------
-    dd : dict
-        mooring design dictionary
-
-    '''
-    
-    from famodel.helpers import MooringProps
-    
-    # set up dictionary of information on the mooring configurations
-    dd = {'span':{},'zAnchor':{}}#,'EndPositions':{}}
-    # set up connector dictionary
-    c_config = []
-    config = [] # mooring and connector combined configuation list
-                
-    lineLast = 1    # boolean whether item with index k-1 is a line. Set to 1 for first run through of for loop
-    ct = 0   # counter for number of line types
-    nsec = len(lineConfigs[lcID]['sections']) # number of sections
-    for k in range(0,nsec): # loop through each section in the line
-    
-        lc = lineConfigs[lcID]['sections'][k] # set location for code clarity later
-        # determine if it's a line type or a connector listed
-        if 'type' in lc or 'mooringFamily' in lc: 
-            # this is a line
-            if lineLast: # previous item in list was a line (or this is the first item in a list)
-                # no connector was specified for before this line - add an empty connector
-                config.append({})
-                c_config.append({})                        
-            # set line information
-            lt = MooringProps(lc, lineTypes, 1025., 9.81, lineProps)                                             
-            # lt = self.lineTypes[lc['type']] # set location for code clarity and brevity later
-            # set up sub-dictionaries that will contain info on the line type
-            config.append({'type':lt})# {'name':str(ct)+'_'+lc['type'],'d_nom':lt['d_nom'],'material':lt['material'],'d_vol':lt['d_vol'],'m':lt['m'],'EA':float(lt['EA'])}})
-            config[-1]['type']['name'] = str(ct)+'_'+str(lt['name'])
-            # make EA a float not a string
-            config[-1]['type']['EA'] = float(lt['EA'])  
-            if 'MBL' in lt:
-                config[-1]['type']['MBL'] = float(lt['MBL'])
-            # set line length
-            config[-1]['L'] = lc['length']
-
-            # update line last boolean
-            lineLast = 1
-            
-        elif 'connectorType' in lc:
-            cID = lc['connectorType']
-            # this is a connector
-            if lineLast == 0:
-                # last item in list was a connector
-                raise Exception(f"Two connectors were specified in a row for line configuration '{lcID}', please remove one of the connectors")
-            else:
-                
-                # last item in list was a line
-                if cID in connectorTypes:
-                    config.append(connectorTypes[cID]) # add connector to list
-                    config[-1]['type'] = cID
-                else:
-                    # try pointProps
-                    try:
-                        props = loadPointProps(None)
-                        design = {f"num_c_{cID}":1}
-                        config.append(getPointProps(design, Props=props))
-
-                    except Exception as e: 
-                        raise Exception(f"Connector type {cID} not found in connector_types dictionary, and getPointProps raised the following exception:",e)
-                        
-                # update lineLast boolean
-                lineLast = 0
-        elif 'subsections' in lc:
-            # TODO: LHS: ERROR CHECKING FOR ORDER OF COMPONENTS PROVIDED WITHIN SUBSECTIONS, ADD IN NEEDED CONNECTORS!!
-            
-            if lineLast and k != 0:
-                # if this is not the first section AND last section was a line, add a empty connector first
-                config.append({})
-                lineLast = 0
-            config.append([])
-            sublineLast = [lineLast]*len(lc['subsections']) # to check if there was a connector provided before this
-            for ii,sub in enumerate(lc['subsections']):
-                config[-1].append([])
-                for jj,subsub in enumerate(sub):
-                    if 'connectorType' in subsub and sublineLast[ii]:
-                        cID = subsub['connectorType']
-                        if cID in connectorTypes:
-                            cID = subsub['connectorType']
-                            config[-1][-1].append(connectorTypes[cID])
-                        else:
-                            # try pointProps
-                            try:
-                                props = loadPointProps(None)
-                                design = {f"num_c_{cID}":1}
-                                config[-1][-1].append(getPointProps(design, Props=props))
-                            except Exception as e: 
-                                raise Exception(f"Connector type {cID} not found in connector_types dictionary, and getPointProps raised the following exception:",e)
-                        sublineLast[ii] = 0
-                    elif 'connectorType' in subsub and not sublineLast[ii]:
-                        raise Exception('Previous section had a connector, two connectors cannot be listed in a row')
-                    elif 'type' or 'mooringFamily' in subsub:
-                        if sublineLast[ii]:
-                            # add empty connector
-                            config[-1][-1].append({})
-                        lt = MooringProps(subsub,proj.lineTypes, proj.rho_water, proj.g, lineProps)
-                        config[-1][-1].append({'type':lt,
-                                               'L': subsub['length']})
-                        # make EA a float not a string
-                        config[-1][-1][-1]['type']['EA'] = float(lt['EA']) 
-                        config[-1][-1][-1]['type']['MBL'] = float(lt['MBL'])
-                        sublineLast[ii] = 1
-                    else:
-                        raise Exception(f"keys in subsection line definitions must either be 'type', 'mooringFamily', or 'connectorType'")
-                    # if this is the last section and the last part of the subsection in the section, it needs to end on a connector
-                    # so, add a connector if last part of subsection was a line!
-                    if sublineLast[ii] and k==nsec-1 and jj==len(sub)-1:
-                        # end bridle needs connectors added 
-                        config[-1][-1].append({})
-                        sublineLast[ii] = 0
-                        
-            lineLast = sublineLast[-1] # TODO: LHS: think how to handle this situation for error checking...
-        else:
-            # not a connector or a line
-            raise Exception(f"Please make sure that all section entries for line configuration '{lcID}' are either line sections (which must have a 'type' key), connectors (which must have a 'connectorType' key, or subsections")
-
-    # check if line is a shared symmetrical configuration
-    if 'symmetric' in lineConfigs[lcID] and lineConfigs[lcID]['symmetric']:
-        if not lineLast: # check if last item in line config list was a connector
-            for ii in range(len()):
-                # set mooring configuration 
-                config.append(config[-1-2*ii])
-                # set connector (since it's mirrored, connector B becomes connector A)
-                config.append(config[-2-2*ii])
-        else: # double the length of the end line
-            config[-1]['L'] =config[-1]['L']*2
-            # set connector B for line same as previous listed connector
-            config.append(config[-1])
-            for ii in range(0,ct-1): # go through every line config except the last (since it was doubled already)
-                # set mooring configuration
-                config.append(config[-2-2*ii])
-                # set connector
-                config.append(config[-3-2*ii])
-    else: # if not a symmetric line, check if last item was a line (if so need to add another empty connector)
-        if lineLast:
-            # add an empty connector object
-            config.append({})
-    # set general information on the whole line (not just a section/line type)
-    # set to general depth first (will adjust to depth at anchor location after repositioning finds new anchor location)
-    dd['subcomponents'] = config
-    dd['zAnchor'] = -depth 
-    dd['span'] = lineConfigs[lcID]['span']
-    dd['name'] = lcID
-    # add fairlead radius and depth to dictionary
-    dd['rad_fair'] = rFair
-    dd['z_fair'] = zFair
- 
-    return dd    
-
-
 
 def getSubsystemFromYAML(filename):
     '''Read a floatign array ontology yaml and create a subsystem
@@ -2219,7 +2107,7 @@ def getSubsystemFromYAML(filename):
     if 'anchor_types' in d and d['anchor_types']:
         for k, v in d['anchor_types'].items():
             anchorTypes[k] = v
-    
+    '''
     # ----- mooring line configurations -----
     lineConfigs = {}
     
@@ -2227,12 +2115,12 @@ def getSubsystemFromYAML(filename):
         for k, v in d['mooring_line_configs'].items():
             # set up mooring config
             lineConfigs[k] = v
-    
+    '''
     # ===== Now make the mooring =====
     
     # create mooring and connector dictionary (calling modified function)
-    mdd = getMooringsHacked('0', lineConfigs, connectorTypes, lineTypes,
-                      lineProps=lineProps, depth=200, rFair=40, zFair=-10)
+    mdd = loadMooringConfig(d['mooring_line_configs']['0'], connectorTypes, 
+          lineTypes, lineProps=lineProps, depth=200, rFair=40, zFair=-10)
     
     mooring = Mooring(dd=mdd, id='the mooring', lineProps=lineProps) # create mooring object
 

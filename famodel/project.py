@@ -36,7 +36,7 @@ from famodel.famodel_base import Node, Edge, rotationMatrix
 from famodel.helpers import (check_headings, head_adjust, getCableDD, getDynamicCables, 
                             loadMooringConfig, getAnchors, getFromDict, cleanDataTypes, 
                             getStaticCables, getCableDesign, m2nm, loadYAML, 
-                            configureAdjuster, route_around_anchors, attachFairleads,
+                            route_around_anchors, attachFairleads,
                             calc_heading, calc_midpoint, compareDicts)
 
 
@@ -1791,6 +1791,7 @@ class Project():
                     r_center = r_center[0]
                 mooring.reposition(r_center=r_center, heading=rel_heading+np.degrees(endB.phi), 
                                    adjust=False, project=self)
+                
                 # adjust anchor z location and rA based on location of anchor
                 zAnew, nAngle = self.getDepthAtLocation(mooring.rA[0], 
                                                         mooring.rA[1], 
@@ -1802,8 +1803,7 @@ class Project():
             mooring.rel_heading = np.degrees(rel_heading)
         
         # Apply any specified mooring adjustment settings
-        mooring = configureAdjuster(mooring, span=span, project=self, **adjuster_settings)
-        #mooring.configureAdjuster(**adjuster_settings)
+        mooring.configureAdjuster(span=span, project=self, **adjuster_settings)
         
         self.mooringList[id] = mooring
         
@@ -5668,7 +5668,7 @@ if __name__ == '__main__':
     
 
     # point to location of yaml file with uniform array info
-    filename = '../Examples/OntologySample600m_shared.yaml.yaml' # yaml file for project
+    filename = '../Examples/OntologySample600m_shared.yaml' # yaml file for project
 
     # load in yaml
     project = Project(file=filename, raft=False)

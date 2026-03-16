@@ -1,0 +1,199 @@
+# ======================================================================
+# capabilities.yaml
+# ----------------------------------------------------------------------
+# This file defines standardized capabilities for vessels and equipment.
+# The applicable specifications are listed beneach each capability type.
+# Each entry needs numeric values per specific asset in vessels.yaml.
+# Vessel actions will be checked against capabilities/actions for validation.
+# A unit conversion capability exists so that vessel capability specs can have
+# other units (denoted after the spec name with an underscore, e.g., capacity_t)
+
+# Each specification field has an entry describing its type:
+# - capacity (adds, e.g. for deck space)
+# - normal (takes maximum value, e.g. for rating)
+# - minimum (takes minimum value, e.g. for accuracy)
+# - bool (just whether it exists or not)
+
+
+# --- Vessel (on-board) ---
+engine:
+  # description: Engine on-board of the vessel
+  # fields:
+   power: capacity       # power [W]
+   site_speed: normal   # speed [m/s]
+
+bollard_pull:
+  # description: Towing/holding force capability
+  # fields:
+   max_force: capacity    # bollard pull [N]
+   site_speed: normal   # speed [m/s]
+ 
+deck_space:
+  # description: Clear usable deck area and allowable load
+  # fields:
+   area: capacity        # usable area [m2]
+   max_load: normal       # allowable deck load [N]
+
+chain_locker:
+  # description: Chain storage capacity
+  # fields:
+   volume: capacity      # storage volume [m3]
+
+line_reel:
+  # description: Chain/rope storage on drum or carousel
+  # fields:
+   volume: capacity          # storage volume [m3]
+   length_capacity: normal     # total rope length storage [m]
+
+cable_reel:
+  # description: Cable storage on drum or carousel
+  # fields:
+   volume: capacity          # storage volume [m3]
+   length_capacity: normal    # total cable length stowable [m]
+
+winch:
+  # description: Deck winch pulling capability
+  # fields:
+   max_line_pull: capacity   # continuous line pull [N]
+   brake_load: normal        # static brake holding load [N]
+   speed: normal             # payout/haul speed [m/a]
+
+
+crane:
+  # description: Main crane lifting capability
+  # fields:
+   capacity: capacity        # lifting force of crane [N]
+   hook_height: normal       # max hook height [m]
+   speed: normal             # crane speed [m/s]
+
+windlass:
+  # description: another way an anchor can be loaded onto a vessel?
+  # fields:
+    capacity: normal  # take the maximum capacity windlass
+    speed: normal     # take the maximum winding speed
+
+station_keeping_by_dynamic_positioning:
+  # description: DP vessel capability for station keeping
+  # fields:
+   type:                   
+  #  TODO: maybe information about thrusters here?
+
+station_keeping_by_anchor:
+  # description: Anchor-based station keeping capability
+  # fields:
+   max_hold_force: normal    # maximum holding force [N]
+ 
+station_keeping_by_bowt:
+  # description: Station keeping by bowt
+  # fields:
+   max_hold_force: normal    # maximum holding force [N]
+
+stern_roller:
+  # description: Stern roller for overboarding/lowering lines/cables over stern
+  # fields:
+   width: normal             # roller width [m]
+ 
+shark_jaws:
+  # description: Chain stoppers/jaws for holding chain under tension
+  # fields:
+   max_load: normal          # maximum holding load [N]
+
+
+# --- Equipment (portable) ---
+
+pump_surface:
+  # description: Surface-connected suction pump
+  # fields:
+   power: normal
+   pressure: normal
+
+pump_subsea:
+  # description: Subsea suction pump (electric/hydraulic)
+  # fields:
+   power: normal
+   pressure: normal
+
+pump_grout:
+  # description: Grout mixing and pumping unit
+  # fields:
+   power: normal
+   flow_rate: capacity
+   pressure: normal
+
+hydraulic_hammer:
+  # description: Impact hammer for pile driving
+  # fields:
+   power: normal
+   energy_per_blow_kJ: normal
+
+vibro_hammer:
+  # description: Vibratory hammer
+  # fields:
+   power: normal
+   centrifugal_force: normal
+
+drilling_machine:
+  # description: Drilling/rotary socket machine
+  # fields:
+   power: normal
+
+torque_machine:
+  # description: High-torque rotation unit
+  # fields:
+   power: normal
+   torque: normal
+
+cable_plough:
+  # description:
+  # fields:
+   power: normal
+
+rock_placement:
+  # description: System for controlled placement of rock for trench backfill, scour protection, and seabed stabilization.
+  # fields:
+   #placement_method:      # e.g., fall_pipe, side_dump, grab
+   fall_pipe_method: bool  # whether this is the method used
+   side_dump_method: bool  # whether this is the method used
+   grab_method: bool       # whether this is the method used
+   max_depth: normal     # maximum operational water depth
+   accuracy_m: minimum     # placement accuracy on seabed
+   rock_size_min: normal   # min rock/gravel size
+   rock_size_max: minimum  # max rock/gravel size
+
+container:
+  # description: Control/sensors container for power pack and monitoring
+  # fields:
+   weight: 
+   dimensions_m:      # LxWxH
+
+rov:
+  # description: Remotely Operated Vehicle
+  # fields:
+   class:             # e.g., OBSERVATION, LIGHT, WORK-CLASS
+   depth_rating: normal
+   weight: 
+   dimensions_m:      # LxWxH
+
+divers:
+  # description: Diver support system
+  # fields:
+   max_depth: normal
+   diver_count: normal
+
+positioning_system:
+  # description: Seabed placement/positioning aids
+  # fields:
+   accuracy: minimum
+   methods:           # e.g., [USBL, LBL, DVL, INS]
+
+monitoring_system:
+  # description: Installation performance monitoring
+  # fields:
+   metrics:           # e.g., [pressure, flow, tilt, torque, bathymetry, berm_shape...]
+   sampling_rate: normal
+
+sonar_survey:
+  # description: Sonar systems for survey and verification
+  # fields:
+   types:             # e.g., [MBES, SSS, SBP]
+   resolution: minimum

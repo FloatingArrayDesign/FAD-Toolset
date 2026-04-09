@@ -395,8 +395,9 @@ class Mooring(Edge):
                 self.i_line = 0
        
             
-            if hasattr(self,'slope'):
-                self.adjuster(self, method = 'pretension', r=r_centerB, project=project, target = self.target, i_line = self.i_line, slope = self.slope)
+            if 'slope'in self.adjuster_settings:
+                self.adjuster_settings.update(dict(method='pretension', r=r_centerB))
+                self.adjuster(self, project)
             
             else:
                 
@@ -408,8 +409,9 @@ class Mooring(Edge):
                 else:
                     print('Warning: depth of mooring line, anchor, and subsystem must be updated manually.')
 
-                self.setEndPosition(np.hstack([self.rB[:2] + self.span*u, self.z_anch]), 'a', sink=True)                
-                self.adjuster(self, method = 'horizontal', r=r_centerB, project=project, target = self.target, i_line = self.i_line)
+                self.setEndPosition(np.hstack([self.rB[:2] + self.span*u, self.z_anch]), 'a', sink=True)
+                self.adjuster_settings.update(dict(method='horizontal', r=r_centerB))
+                self.adjuster(self, project)
             
         elif self.shared == 1: # set position of end A at platform end A if no fairlead objects
             if not len(self.subcons_A[0].attachments) > 1:
@@ -484,7 +486,9 @@ class Mooring(Edge):
                           i_line=0, span=None, project=None, target=None):
         '''Configures adjuster function for mooring object
         
-        #MH: >>> moved in from helpers. To be worked on <<<
+        #MH: >>> moved in from helpers. To be worked on. Support passing any dict of settings... <<<
+        
+        The following are now stored in Mooring.adjuster_settings: target, i_line, slope
         
         mooring : FAModel Mooring object
         adjuster : function, optional
@@ -501,6 +505,9 @@ class Mooring(Edge):
         target : target value(s) for method - either pretension value or horizontal force value in x and y
         
         '''
+        
+        asets = self.adjuster_settings  # shorthand for the settings dictionary
+        
         #calculate target pretension or horizontal tension if none provided
         if adjuster != None and target == None:
             targetdd = deepcopy(self.dd)
@@ -512,9 +519,9 @@ class Mooring(Edge):
             self.createSubsystem(dd=targetdd)
             
             if method == 'horizontal':
-                self.target = np.linalg.norm(self.ss.fB_L[:2])
+                asets['target'] = np.linalg.norm(self.ss.fB_L[:2])
             elif method =='pretension':
-                self.target = np.linalg.norm(self.ss.fB_L)
+                asets['target'] = np.linalg.norm(self.ss.fB_L)
             else:
                 raise Exception('Invalid adjustment method. Must be pretension or horizontal')
             # return mooring depth to accurate val
@@ -522,11 +529,11 @@ class Mooring(Edge):
                 depth = project.getDepthAtLocation(self.rA[0], self.rA[1])
                 self.rA[2] = -depth
         else:
-            self.target = target
+            asets['target'] = target
         
         if adjuster!= None:
             self.adjuster = adjuster 
-            self.i_line = i_line 
+            asets['i_line'] = i_line 
             
             # check if method is 'pretension' then save slope
             if method == 'pretension':
@@ -537,11 +544,11 @@ class Mooring(Edge):
                     
                     #calculate mooring slope using base depth
                     #**** this assumes that the mooring system is designed for the base depth*****
-                    self.slope = (project.depth+self.rB[2]) / self.dd['span']
+                    asets['slope'] = (project.depth+self.rB[2]) / self.dd['span']
                     
                 else:   
                     if span:
-                        self.slope = (project.depth+self.rB[2]) / span
+                        asets['slope'] = (project.depth+self.rB[2]) / span
                     else:
                         raise Exception('Span required to perform adjustment')
     
@@ -714,8 +721,8 @@ class Mooring(Edge):
             # run through each line section and collect the length and type
             for sec in secs:
                 lengths.append(sec['L'])
-                types.append(deepcopy(sec['type'])) # list of type names
-            
+                types.append(sec['type']) #types.append(deepcopy(sec['type'])) # list of type names
+                # <<< is there a reason we were deepcopying (unlinking) this? <<<
             
             # make the lines and set the points 
             ss.makeGeneric(lengths, types, 
@@ -1817,20 +1824,24 @@ class Mooring(Edge):
     #             ind[level] += 1
 
 
-def adjustMooring(mooring, method = 'horizontal', r=[0,0,0], project=None, target=1e6,
-                       i_line = [0], slope = 0.58, display=False ):
-    '''Custom function to adjust a mooring, called by
-    Mooring.adjust. Fairlead point should have already
-    been adjusted.
+def adjustMooring(mooring, project, display=0):
+    '''Default/example function to adjust a mooring after it has been 
+    repositioned. This function would be assigned to Mooring.adjuster,
+    and it is expected that settings for the adjustment process are
+    stored in a Mooring.adjuster_settings dictionary. 
+    Note that the mooring line endpoints should already be in place when
+    this function is called.
     
-    There are two methods: "pretension" geometrically adjusts the anchor point and matches pretension, intended for taut moorings.
-    "horizontal" leaves anchor point in the same position and matches the horizontal forces, intended for catenary and semi-taut moorings
+    This example function looks for some of the following types of info:
     
-    Parameters
-    ----------
-    mooring : FAModel Mooring object
-    r : array
-        platform center location (only used for pretension method)
+    method = 'horizontal', r=[0,0,0], project=None, target=1e6,
+    i_line = [0], slope = 0.58, display=False 
+    
+    There are two methods: "pretension" geometrically adjusts the anchor 
+    point and matches pretension, intended for taut moorings.
+    "horizontal" leaves anchor point in the same position and matches the 
+    horizontal forces, intended for catenary and semi-taut moorings
+    
     project : FAModel Project object this is a part of. 
         This is a required input for the "pretension" option to correctly move the anchor position, not used in the 'horizontal method'
     target_pretension : float
@@ -1839,10 +1850,17 @@ def adjustMooring(mooring, method = 'horizontal', r=[0,0,0], project=None, targe
         List of indexes of line section to adjust
     slope: float
         depth over span for baseline case (to match same geometric angle for 'pretension' option)
+    '''
     
-        '''
     from moorpy.helpers import dsolve2
+    
     ss = mooring.ss  # shorthand for the mooring's subsystem
+    asets = mooring.adjuster_settings  # shorthand for settings dict
+    method = getFromDict(asets, 'method', default='horizontal')
+    r = getFromDict(asets, 'r', default=[0,0,0])
+    target = getFromDict(asets, 'target', default=1e6)  #<<< shouldn't have a default
+    i_line = getFromDict(asets, 'i_line', default=[0])
+    slope = getFromDict(asets, 'slope', default=.58)  #<<< shouldn't have a default
 
     if method == 'pretension':
         

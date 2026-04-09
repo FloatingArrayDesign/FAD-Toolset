@@ -881,9 +881,12 @@ class Layout(Project):
             #print(self.nt, len(self.turb_depth), X)
             #print(self.turb_coords)
           
-            # Update Paltform class
+            # Update each turbine's platform and mooring system
             for i in range(self.nt):
-                self.platformList[i].setPosition(self.turb_coords[i], heading=self.turb_rot[i], degrees=False, project = self)  
+                
+                self.platformList[i].setPosition(self.turb_coords[i], 
+                    heading=self.turb_rot[i], degrees=False, project=self)
+                
                 # switch anchor type
                 anchs = self.platformList[i].getAnchors() 
                 for anch in anchs.values():

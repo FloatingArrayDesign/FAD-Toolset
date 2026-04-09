@@ -1,13 +1,12 @@
 # New version of LineDesign that uses Subsystem
 
-import moorpy as mp # type: ignore
-#import moordesign.MoorSolve as msolve
-from famodel.design.fadsolvers import dsolve2, dopt2, doptPlot
-from moorpy.MoorProps import getAnchorProps # type: ignore
-from moorpy.helpers import (loadLineProps, getLineProps,  # type: ignore
-                            rotationMatrix, getFromDict) 
-
 from famodel.mooring.mooring import Mooring
+from famodel.design.fadsolvers import dsolve2, dopt2, doptPlot
+from famodel.helpers import getFromDict
+
+import moorpy as mp
+from moorpy.MoorProps import getAnchorProps
+from moorpy.helpers import (loadLineProps, getLineProps, rotationMatrix)
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -114,7 +113,10 @@ class LineDesign(Mooring):
             raise Exception("Xindices must be provided.")
             
         # find the largest integer to determine the number of desired design variables
-        self.nX = 1 + max([ix for ix in self.Xindices if isinstance(ix, int)])
+        if any([isinstance(ix, int) for ix in self.Xindices]):
+            self.nX = 1 + max([ix for ix in self.Xindices if isinstance(ix, int)])
+        else:
+            self.nX = 0  # no design variables listed
         
         # check for errors in Xindices
         for i in range(self.nX):
@@ -314,13 +316,13 @@ class LineDesign(Mooring):
         
         
         # ----- optimization stuff -----
+        
         # get design variable bounds and last step size
         self.Xmin       = getFromDict(kwargs, 'Xmin'   , shape=self.nX)             # minimum bounds on each design variable
         self.Xmax       = getFromDict(kwargs, 'Xmax'   , shape=self.nX)             # maximum bounds on each design variable
         self.dX_last    = getFromDict(kwargs, 'dX_last', shape=self.nX, default=[]) # 'last' step size for each design variable
         if len(self.Xmin) != self.nX or len(self.Xmax) != self.nX or len(self.dX_last) != self.nX:
             raise Exception("The size of Xmin/Xmax/dX_last does not match the number of design variables")
-        
         
         # initialize the vector of the last design variables, which each iteration will compare against
         self.Xlast = np.zeros(self.nX)
@@ -379,6 +381,7 @@ class LineDesign(Mooring):
                 con['unit'] = conUnitsDict[con['name']]
             else:
                 raise Exception(f"The constraint name '{con['name']}' is not recognized.")
+        
         # set up list of active constraint functions
         self.conList = []
         self.convals = np.zeros(len(self.constraints))  # array to hold constraint values

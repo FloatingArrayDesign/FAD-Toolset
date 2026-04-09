@@ -119,6 +119,7 @@ class Platform(Node):
                 moor.dd['span'] = np.linalg.norm(moor.rA[:2]-moor.rB[:2])
                 moor.span=moor.dd['span']
     
+    
     def mooringSystem(self,rotateBool=0,mList=None,bodyInfo=None, project=None):
         '''
         Create a MoorPy system for the platform based on the mooring subsystems provided in 

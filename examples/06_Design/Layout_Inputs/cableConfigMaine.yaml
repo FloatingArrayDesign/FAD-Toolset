@@ -1,0 +1,193 @@
+configs:
+  - A: 300
+    name: cable_300
+    dist:  1701.6
+    depth: 150
+    sections:
+      - dynamic_cable1    
+      - static_cable1
+      - dynamic_cable1
+    type: 0
+    # connector_cost: 101500
+    # joint_cost: 118500
+  
+  - A: 300
+    name: cable_300_220
+    dist:  1701.6
+    depth: 220
+    sections:
+      - dynamic_cable1_220    
+      - static_cable1
+      - dynamic_cable1_220
+    type: 0
+    # connector_cost: 101500
+    # joint_cost: 118500
+
+  - name: cable_630
+    dist: 1600
+    A: 630
+    depth: 150
+    sections:
+      - dynamic_cable2    
+      - static_cable1
+      - dynamic_cable2
+    type: 0
+    # connector_cost: 136500
+    # joint_cost: 118500
+
+  - A: 630
+    name: cable_630_220
+    dist:  1701.6
+    depth: 220
+    sections:
+      - dynamic_cable2_220    
+      - static_cable1
+      - dynamic_cable2_220
+    type: 0
+    # connector_cost: 136500 #101500
+    # joint_cost: 118500
+
+  - name: cable_1000
+    dist: 1600
+    A: 1000
+    depth: 150
+    sections:
+      - dynamic_cable3    
+      - static_cable1
+      - dynamic_cable3
+    type: 0
+    # connector_cost: 176024
+    # joint_cost: 118500
+
+  - name: cable_1000_220
+    dist: 1600
+    A: 1000
+    depth: 220
+    sections:
+      - dynamic_cable3_220    
+      - static_cable1
+      - dynamic_cable3_220
+    type: 0
+    # connector_cost: 176024
+    # joint_cost: 118500
+
+  
+cableTypes:
+
+  dynamic_cable1:
+      span: 200
+      length: 303.505
+      cable_type: dynamic_cable_66
+      type: dynamic
+      A: 300
+      depth: 150
+      sections:
+        - type: cable_connector_0
+        - L_mid: 151.98
+          N_modules: 6
+          spacing: 12
+          type: buoy_0
+        - type: joint_0
+
+  static_cable1:
+    type: static
+    cable_type: static_cable_66
+
+  dynamic_cable1_220:
+      span: 200
+      length: 373.505
+      cable_type: dynamic_cable_66
+      type: dynamic
+      A : 300
+      depth: 220
+      sections:
+        - type: cable_connector_0
+        - L_mid: 221.98
+          N_modules: 6
+          spacing: 12
+          type: buoy_0
+        - type: joint_0
+
+  dynamic_cable2:
+      span: 200
+      length: 303.505
+      cable_type: dynamic_cable_66
+      type: dynamic
+      A: 630
+      depth: 150
+      sections:
+        - type: cable_connector_1
+        - L_mid: 151.98
+          N_modules: 10 #18
+          spacing: 3.53
+          type: buoy_0
+        - type: joint_0
+
+  dynamic_cable2_220:
+      span: 200
+      length: 373.505
+      cable_type: dynamic_cable_66
+      type: dynamic
+      A: 630
+      depth: 220
+      sections:
+        - type: cable_connector_1
+        - L_mid: 221.98
+          N_modules: 10 #18
+          spacing: 3.53
+          type: buoy_0
+        - type: joint_0
+
+  dynamic_cable3:
+      span: 200
+      length: 303.505
+      cable_type: dynamic_cable_66
+      type: dynamic
+      A: 1000
+      depth: 150
+      sections:
+        - type: cable_connector_2
+        - L_mid: 151.98
+          N_modules: 14 #21
+          spacing: 3
+          type: buoy_0
+        - type: joint_0
+
+  dynamic_cable3_220:
+      span: 200
+      length: 373.505
+      cable_type: dynamic_cable_66
+      type: dynamic
+      A: 1000
+      depth: 220
+      sections:
+        - type: cable_connector_2
+        - L_mid: 221.98
+          N_modules: 14 #21
+          spacing: 3
+          type: buoy_0
+        - type: joint_0
+            
+
+cableAppendages:
+    buoy_0:
+        type: buoy
+        d: 0.865
+        density: 500
+        l: 0.9
+        m: 270.68
+        volume: 0.566
+        w: -2897.09
+        cost: 1000
+    cable_connector_0:
+        cost: 101500
+        type: cable_connector
+    cable_connector_1:
+        cost: 136500
+        type: cable_connector
+    cable_connector_2:
+        cost: 176024
+        type: cable_connector
+    joint_0:
+        cost: 118500
+        type: joint

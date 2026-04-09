@@ -6,7 +6,7 @@ of the soil and bathymetry contour lines (no platforms, moorings, cables, platfo
                                        site condition information, etc.)
 """
 
-from famodel import Project
+from fad import Project
 import matplotlib.pyplot as plt
 import os
 

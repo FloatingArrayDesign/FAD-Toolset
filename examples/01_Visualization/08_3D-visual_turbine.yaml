@@ -36,7 +36,7 @@ array:
 
 topsides:
  # RAFT turbine description needed for 3d visual of turbine topside. See RAFT documentation for details on turbine definitions       
-  - !include ../IEA-15-240-RWT.yaml # RAFT wind turbine definition for IEA 15 MW turbine
+  - !include ../Common_Inputs/IEA-15-240-RWT.yaml # RAFT wind turbine definition for IEA 15 MW turbine
   - type          :     Substation
     mass          :     100000 # additional topside mass (not mass of platform)
 

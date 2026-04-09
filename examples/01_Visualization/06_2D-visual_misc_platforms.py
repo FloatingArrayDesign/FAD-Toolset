@@ -5,7 +5,7 @@ of the platform locations (no moorings, cables, anchors, platform design, topsid
                           site condition information, etc.)
 """
 
-from famodel import Project
+from fad import Project
 import matplotlib.pyplot as plt
 import os
 

@@ -56,7 +56,7 @@ anchor_types:
 
 topsides:
         
-  - !include ../IEA-15-240-RWT.yaml
+  - !include ../Common_Inputs/IEA-15-240-RWT.yaml
 
 platform:
   type         :  FOWT

@@ -1,5 +1,5 @@
 
-from famodel.anchors.anchor import Anchor
+from fad.anchors.anchor import Anchor
 
 # --- Define soil profile ---
 profile_map = [

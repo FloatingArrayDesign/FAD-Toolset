@@ -9,19 +9,19 @@ from numpy.testing import assert_allclose
 
 import matplotlib.pyplot as plt
 
-from famodel.project import Project
+from fad.project import Project
 
-from famodel.mooring.mooring import Mooring
-from famodel.platform.platform import Platform
-from famodel.anchors.anchor import Anchor
-from famodel.mooring.connector import Connector
-from famodel.substation.substation import Substation
-from famodel.cables.cable import Cable
-from famodel.cables.dynamic_cable import DynamicCable
-from famodel.cables.static_cable import StaticCable
-from famodel.cables.cable_properties import getCableProps, getBuoyProps
-from famodel.cables.components import Joint
-from famodel.turbine.turbine import Turbine
+from fad.mooring.mooring import Mooring
+from fad.platform.platform import Platform
+from fad.anchors.anchor import Anchor
+from fad.mooring.connector import Connector
+from fad.substation.substation import Substation
+from fad.cables.cable import Cable
+from fad.cables.dynamic_cable import DynamicCable
+from fad.cables.static_cable import StaticCable
+from fad.cables.cable_properties import getCableProps, getBuoyProps
+from fad.cables.components import Joint
+from fad.turbine.turbine import Turbine
 
 import os
 
@@ -119,7 +119,7 @@ def test_headings_repositioning():
                     np.hstack(([-820.25,-835.07,-600],[40.5,0,-20])),rtol=0,atol=0.5)
     x_off = 5*np.cos(np.radians(-60))
     y_off = 5*np.sin(np.radians(-60))
-    assert_allclose(np.hstack((project.cableList['array_cable12'].subcomponents[0].rB,project.cableList['cable0'].subcomponents[0].rB)),
+    assert_allclose(np.hstack((project.cableList['cable2'].subcomponents[0].rB,project.cableList['cable0'].subcomponents[0].rB)),
                     np.hstack(([600+x_off,0+y_off,-600],[0+x_off,1656+y_off,-20])),rtol=0,atol=0.5)
     
 def test_marine_growth():

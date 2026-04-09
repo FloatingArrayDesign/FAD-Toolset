@@ -1,6 +1,6 @@
 import numpy as np
 import moorpy as mp
-from famodel.design.LineDesign import LineDesign
+from fad.design.LineDesign import LineDesign
 from pathlib import Path
 
 

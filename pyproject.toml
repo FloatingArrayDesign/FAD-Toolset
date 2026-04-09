@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fad-toolset"
+version = "1.0.0"
+description = "A floating array modeling library"
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.8,<3.12"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+]
+keywords = ["offshore wind", "floating platforms", "mooring systems", "array design"]
+
+dependencies = [
+    "numpy>=1.20.0",
+    "matplotlib>=3.5.0", 
+    "scipy==1.11.2",
+    "pandas>=1.3.0",
+    "shapely>=1.8.0",
+    "pyyaml>=6.0",
+    "geopandas>=0.10.0",
+    "floris==4.2",
+    "pytest>=6.0",
+    "moorpy>=1.3.0",
+    "openraft>=2.0.3",
+    "pyswarm",
+]
+
+[project.urls]
+Homepage = "https://github.com/FloatingArrayDesign/FAD-Toolset"
+
+[tool.setuptools]
+packages = ["fad"]
+
+[tool.setuptools.package-data]
+"*" = ["*.txt", "*.md", "*.yaml"]

@@ -5,23 +5,23 @@ modeling and designing arrays of floating offshore structures. It was
 originally designed for floating wind systems but has applicability
 for many offshore applications.
 
-A core part of the FAD Toolset is the Floating Array Model (FAModel),
+A core part of the FAD Toolset is the floating array model,
 which serves as a high-level library for efficiently
-modeling a floating wind array. It combines site condition information and a 
+modeling a floating array, such as a floating wind array. It combines site condition information and a 
 description of the floating array design, and contains functions for evaluating
 the array's behavior considering the site conditions. For example, it combines
-information about site soil conditions and an array's anchor characteristics to
-estimate the holding capacity of each anchor.
+information about site soil conditions, mooring line loads, and an array's anchor characteristics to
+estimate the holding capacity of each anchor. 
 
 The library works in conjunction with the tools RAFT, MoorPy, and FLORIS to model floating
-wind turbines, mooring systems, and array wakes respectively.
+platforms, wind turbines, mooring systems, power cables, and array wakes respectively.
 
 Layered on top of the floating array model is a set of design tools that can
 be used for algorithmically adjusting or optimizing parts of the a floating
 array. Specific tools existing for mooring lines, shared mooring systems, 
 dynamic power cables, static power cable routing, and overall array layout.
 These capabilities work with the design representation and evaluation functions
-in FAModel, and they can be applied by users in various combinations to suit
+in the floating array model, and they can be applied by users in various combinations to suit
 different purposes. 
 
 In addition to standalone uses of the FAD Toolset, a coupling has been made with
@@ -36,62 +36,56 @@ and designs.
 
 See example use cases in our [examples](./examples/README.md) folder.
 
-
-## Pre-installation Requirements
-
-The FAD Toolset is built entirely in Python. It is recommended that users 
-familiarize themselves with basic Python commands before use. 
 For working with the library, it is important to understand the floating array 
-model structure, which is described more [here](./famodel/README.md).
+model structure, which is described more [here](./fad/README.md).
 
 
 ## Installation
 
-To install the FAD Toolset itself, first clone this FAD-Toolset repository.
+FAD-Toolset is built entirely in Python. It is recommended that users familiarize themselves with Python and install Python onto their machine through Anaconda or Miniconda distributions.
 
-The dependencies required by FAD depend on how it is used. To install all
-possible required dependencies, you can create a 
-new python virtual environment based on the included yaml listing the required 
-dependencies.
+The following describes the steps to set up a python virtual environment, install FAD-Toolset, and all install required dependencies into the environment.
 
-In the terminal (Anaconda Powershell Prompt), clone this repository to a 
-directory of your choice, navigate into the main folder of the repository, and 
-run the following command:
+First, in a terminal such as the Anaconda Powershell Prompt, clone the GitHub repository to access the files. Navigate to a directory of your choice to download the repository and then navigate into the FAD-Toolset folder.
 
-    conda env create -f famodel-env.yaml
+```
+(base) YOUR_PATH> git clone https://github.com/FloatingArrayDesign/FAD-Toolset.git
+(base) YOUR_PATH> cd FAD-Toolset
+```
 
-This command will install all the dependencies required to run FAD.
-Activate your virtual environment before using FAD with ```conda activate famodel-env```
+Next, create a new python virtual environment with an environment name of your choice. We will use 'fad-env' as an example.
 
-To install the FAD Toolset package in your environment, enter the 
-following in the command line from the FAD-Toolset directory.
+```
+(base) YOUR_PATH\FAD-Toolset> conda env create -n fad-env -f fad-env.yaml
+(base) YOUR_PATH\FAD-Toolset> conda activate fad-env     # run `conda deactivate` to deactivate
+(fad-env) YOUR_PATH\FAD-Toolset>
+```
 
-For development use:
+Within the new python virtual environment, we can install FAD-Toolset. 
 
-run ```python setup.py develop``` or ```pip install -e .``` from the command 
-line in the main FAD-Toolset directory.
+Use ```pip``` to install the contents of this folder. Ensure you are still within the root directory of FAD-Toolset.
 
-For non-development use:
+```
+(fad-env) YOUR_PATH\FAD-Toolset> pip install -e .
+```
 
-run ```python setup.py``` or ```pip install .``` from the command line in 
-the main FAD-Toolset directory.
+This command tells `pip` to look at the `pyproject.toml` file to install the FAD-Toolset program into the current virtual environment, along with all the dependencies listed in the `pyproject.toml` file. There is overlap between the python packages listed in the `pyproject.toml` and the `fad-env.yaml` file since the installation can be done by either or both of the package installation managers, `conda` and `pip`. Specific versions of packages like scipy are listed in the `pyproject.toml` file to ensure they get installed properly. The `-e` option allows users to make local changes to their FAD-Toolset files and have those changes be reflected in the FAD-Toolset installation.
 
-You can test the installation by running ```pytest``` from the main FAD-Toolset directory.
+Lastly, we can test the installation by running `pytest` from the main FAD-Toolset directory.
+
+```
+(fad-env) YOUR_PATH\FAD-Toolset> pytest
+```
 
 <!-- FAD requires MoorPy and we currently install it separately. If you don't already have it,
 you can install MoorPy with ```git clone https://github.com/NREL/MoorPy.git```
 then navigate to the MoorPy folder and install with ```pip install .```.
 Make sure your virtual enviroment is activated before installing MoorPy. -->
 
+For future changes to dependencies like MoorPy or RAFT, as long as those changes come through a new release of the software and an updated version is listed on PyPI, users should manually re-install the dependencies in their virtual environment to gather those new changes (i.e., `pip install moorpy`).
 
-### Optional Dependencies
+FAD-Toolset is also pip installable and can be installed using `pip install fad-toolset`. The main source code folder in the repo is named `fad`, which is how classes and functions will be imported (i.e., `import fad.Project as Project` or `from fad.anchors.anchor import Anchor`).
 
-Some features or capabilities in the toolset use additional packages that are
-not already installed from famodel-env.yaml.
-
-- The array layout optimization capability can use a particle swarm optimizer
-  from pyswarm (not to be confused with pyswarms). It is pip installable
-  (pip install --upgrade pyswarm).
 
 
 ### Installation/Dependency Issues
@@ -127,7 +121,7 @@ Please navigate into the subfolders above for additional information.
 The easiest way to create a FAD project is to provide the array 
 information in an ontology yaml file. FAD has been designed
 to work with a specific ontology yaml setup, which is described 
-in detail in the [Ontology ReadMe](./famodel/ontology/README.md).
+in detail in the [Ontology ReadMe](./fad/ontology/README.md).
 
 For examples of ontologies and driver files of common use cases, 
 we recommend starting with the numbered examples in the examples folder.
@@ -139,15 +133,15 @@ in the ontology.
 To see an example with all use cases, the [example driver file](./examples/example_driver.py) creates a FAD Project 
 object from a pre-set ontology file and shows the syntax and outputs of 
 various capabilities. For guidance on creating your own ontology yaml file, 
-it is recommended to read through the [Ontology ReadMe](./famodel/ontology/README.md), 
+it is recommended to read through the [Ontology ReadMe](./fad/ontology/README.md), 
 then either adapt one of the ontology samples or fill in the ontology template. 
 
-The [core model readme](./famodel/README.md) describes the Project class structure, 
+The [core model readme](./fad/README.md) describes the Project class structure, 
 as well as the properties and methods of each component class. 
 
 There are some limited helper functions to automatically fill in sections 
 of a yaml from a MoorPy system or a list of platform locations. 
-See [helpers](./famodel/helpers.py) for the full list of yaml writing capabilities. 
+See [helpers](./fad/helpers.py) for the full list of yaml writing capabilities. 
 
 
 ## Authors

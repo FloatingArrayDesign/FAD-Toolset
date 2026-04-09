@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Simple driver file to create a 2d plot of an platform locations with
+Simple driver file to create a 2d plot of platform locations with
 cables in an array using Jtubes to define platform connection location.
 The input file only contains the bare minimum information to build a 2d plot 
 of the turbine locations and cables connected to Jtubes (no moorings, platform design, turbines, 
                                        site condition information, etc.)
 """
 
-from famodel import Project
+from fad import Project
 import matplotlib.pyplot as plt
 import os
 

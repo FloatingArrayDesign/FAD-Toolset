@@ -18,16 +18,6 @@ site:
             # -[x3, y3]
             # -[x4, y4]
     
-    exclusions:
-      - name: round example
-        x_y_r:
-          - [x1, y1, r1] 
-      
-      - name: polygon example with sharp corners (radius ommitted)
-        x_y_r:
-            -[x1, y1]
-            -[x2, y2]
-    
     bathymetry:
         file:   #'../bathymetry200m_sample.txt'
     

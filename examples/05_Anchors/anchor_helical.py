@@ -1,5 +1,5 @@
 
-from famodel.anchors.anchor import Anchor
+from fad.anchors.anchor import Anchor
 
 # --- Soil profile for helical pile in clay ---
 profile_map = [

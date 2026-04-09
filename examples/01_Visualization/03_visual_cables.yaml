@@ -44,10 +44,10 @@ array_cables:
     # headingB: compass heading of dynamic cable relative to platform heading (if platform at end B is rotated +15, headingB should be true heading - 15)
     #           In this case, we have a cable coming into fowt1 from fowt0 from the West, so headingB is 270 deg
     #           For the 2nd cable from fowt1 to fowt2, the cable comes into fowt2 from the West, so headingB is also 270 deg
-    # cableType: references a cable type from cable_types section or from famodel/cables/cableProps_default.yaml static cables. 
+    # cableType: references a cable type from cable_types section or from fad/cables/cableProps_default.yaml static cables. 
     #            If no static cable (i.e. a suspended cable design), put NONE
     #            In this case, we have no static cable for the 1st cable because it is suspended, 
-    #              but the 2nd cable has a static cable defined in famodel/cables/cableProps_default.yaml called 'static_cable_66'.
+    #              but the 2nd cable has a static cable defined in fad/cables/cableProps_default.yaml called 'static_cable_66'.
     data:
       - [ fowt0, fowt1, suspended_1, None, 90, 270, None] # suspended cable, so only one dynamic cable configuration, no static cable
       - [ fowt1, fowt2, lazy_wave1,  lazy_wave1, 90, 270, static_cable_66]
@@ -60,11 +60,11 @@ dynamic_cable_configs:
         voltage: 66   # [kV]
         span : 195    # [m] horizontal distance to end of dynamic cable from attachment point
         A: 300        # cable conductor area [mm^2]
-        cable_type: dynamic_cable_66      # ID of a cable section type from famodel/cables/cableProps_default.yaml. Cable props loaded automatically from this!
+        cable_type: dynamic_cable_66      # ID of a cable section type from fad/cables/cableProps_default.yaml. Cable props loaded automatically from this!
         length: 353.505                   # [m] length (unstretched) 
        
         sections: 
-          - type: Buoyancy_750m # name of buoy type from famodel/cables/cableProps_default.yaml - buoy design info read in automatically from this!
+          - type: Buoyancy_750m # name of buoy type from fad/cables/cableProps_default.yaml - buoy design info read in automatically from this!
             L_mid: 200 # [m] length of cable to the midpoint of the buoyancy section from platform connection
             N_modules: 6 # number of buoyancy modules
             spacing: 11.23 # [m] distance between module centers
@@ -75,7 +75,7 @@ dynamic_cable_configs:
         name: Dynamic suspended cable configuration 1 
         voltage: 33 # [kV]
         span: 1512    # [m] horizontal distance to end of dynamic cable from attachment point
-        cable_type: dynamic_cable_66        # ID of a cable section type from famodel/cables/cableProps_default.yaml. Cable props loaded automatically from this!
+        cable_type: dynamic_cable_66        # ID of a cable section type from fad/cables/cableProps_default.yaml. Cable props loaded automatically from this!
         A: 300 # cable conductor area [mm^2]
         length: 1650                   # [m] length (unstretched)
             

@@ -5,7 +5,7 @@ This file then adds a wave spectrum to run, analyzes that case, and plots the re
 For more information on using RAFT, please see RAFT documentation at https://github.com/WISDEM/RAFT
 """
 
-from famodel import Project
+from fad import Project
 import matplotlib.pyplot as plt
 import os
 

@@ -1,11 +1,12 @@
 
-from famodel import Project
-from famodel.anchors.anchor import Anchor
+import os
+from fad import Project
+from fad.anchors.anchor import Anchor
 
 # Step 1: Initialize and load soil
 proj = Project()
 proj.loadSoil(
-    filename='inputs/GulfOfMaine_soil_layered_100x100.txt',
+    filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inputs', 'GulfOfMaine_soil_layered_100x100.txt'),
     soil_mode='uniform')  # 'uniform' soil mode does not need from the profile_source yaml file
     
 # Step 2: Create and register an anchor at a known position in the grid

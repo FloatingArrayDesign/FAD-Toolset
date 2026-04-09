@@ -1,5 +1,5 @@
 # tests anchor capacity and load functionality
-from famodel.project import Project
+from fad.project import Project
 import numpy as np
 import os
 import matplotlib.pyplot as plt
@@ -25,7 +25,7 @@ def project():
     return(Project(file=os.path.join(dir,'testOntology.yaml'), raft=False))
 
 def test_anchor_loads(project):
-    # load in famodel project 
+    # load in fad project 
     project.getMoorPyArray(cables=1)
     anch = project.anchorList['FOWT1a']
    

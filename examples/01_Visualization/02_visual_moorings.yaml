@@ -84,6 +84,6 @@ anchor_types:
     drag-embedment1:
         type   :  DEA   # type of anchor (drag-embedment anchor)
         # additional anchor properties can be defined here, such as d (diameter), m (mass), etc., but are not required for visualization
-        # To see the full list of anchor properties and anchor types, refer to the anchor readme (famodel/anchors/README.md)
+        # To see the full list of anchor properties and anchor types, refer to the anchor readme (fad/anchors/README.md)
 
 

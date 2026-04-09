@@ -9,7 +9,7 @@ of the turbine locations and moorings with fairleads (no cables, platform design
                                        site condition information, etc.)
 """
 
-from famodel import Project
+from fad import Project
 import matplotlib.pyplot as plt
 import os
 

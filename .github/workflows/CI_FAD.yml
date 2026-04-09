@@ -1,0 +1,72 @@
+name: CI_FAD
+
+# Run CI on push commits and pull requests on main branches and dev
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+  # Allow manual triggering of the workflow
+  workflow_dispatch:
+
+# Workflow jobs for comprehensive testing
+jobs:
+  # Comprehensive integration tests
+  build_conda:
+    name: Conda Build (${{ matrix.os }}) - Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+                
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "macOS-latest", "windows-latest"]
+        python-version: ["3.11"]
+
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          # Use mamba for faster package resolution
+          #mamba-version: "*"
+          miniforge-version: "latest"
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+          environment-file: fad-env.yaml
+          activate-environment: fad-env
+          auto-activate-base: false
+          channels: conda-forge
+          channel-priority: true
+          #use-mamba: true          
+
+      - name: Install additional dependencies
+        run: |
+          conda install -y pytest meson ninja nlopt
+          pip install scipy==1.11.2   # specific SciPy version needed for current LineDesign test results
+          conda info
+
+      - name: Install FAD-Toolset package
+        run: |
+          pip install -e .
+
+      - name: Update MoorPy to dev version
+        run: |
+          pip uninstall -y moorpy  # need to uninstall the old version to install the current dev branch
+          pip install git+https://github.com/NREL/MoorPy@dev
+
+      - name: Run example driver
+        run: |
+          cd examples
+          python example_driver.py false
+
+      - name: Run comprehensive tests
+        run: |
+          cd tests
+          pytest .
+

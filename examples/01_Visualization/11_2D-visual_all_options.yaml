@@ -10,9 +10,9 @@ site:
           - [2500, -2500]
           - [-2500, -2500]
     seabed:
-        file: '../GulfOfMaine_soil_uniform_100x100.txt' # seabed soil data file in MoorPy seabed format
+        file: '../Common_Inputs/GulfOfMaine_soil_uniform_100x100.txt' # seabed soil data file in MoorPy seabed format
     bathymetry:
-        file: '../GulfOfMaine_bathymetry_100x100.txt' # bathymetry data file in MoorPy bathymetry format
+        file: '../Common_Inputs/GulfOfMaine_bathymetry_100x100.txt' # bathymetry data file in MoorPy bathymetry format
 
 # Wind turbine array layout
 array:
@@ -148,16 +148,19 @@ cable_appendages:
         density: 500
         w : -2915.0415
         d : 0.895
+        cost: 3000 # example cost, not based on actual data
     joint_1 :
         type : joint
-        m : 100000
+        m : 100000 # example cost, not based on actual data
+        cost: 50000
     bend_stiffener_1 :
         type : bend_stiffener
+        cost: 50000 # example cost, not based on actual data
 
 
 topsides:
         
-  - !include ../IEA-15-240-RWT.yaml # RAFT wind turbine definition for IEA 15 MW turbine
+  - !include ../Common_Inputs/IEA-15-240-RWT.yaml # RAFT wind turbine definition for IEA 15 MW turbine
   - type          :     Substation
     mass          :     100000 # additional topside mass (not mass of platform)
 

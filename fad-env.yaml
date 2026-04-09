@@ -1,0 +1,25 @@
+name: fad-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.8,<3.12
+  - numpy>=1.20.0
+  - matplotlib>=3.5.0
+  - scipy==1.11.2
+  - pandas>=1.3.0
+  - shapely>=1.8.0
+  - pyyaml>=6.0
+  - geopandas>=0.14.0
+  - pytest>=6.0
+  - pip
+  - setuptools  # needed for building packages from source (just in case)
+  - pip:
+    # PyPI-only packages
+    - floris==4.2
+    - pyswarm
+    - openraft>=2.0.3
+    - moorpy>=1.2.1
+    # Uncomment if you need development versions instead:
+    # - git+https://github.com/WISDEM/RAFT@dev#egg=openraft
+    # - git+https://github.com/NREL/MoorPy@dev#egg=moorpy

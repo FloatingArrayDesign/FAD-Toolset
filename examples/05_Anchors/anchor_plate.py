@@ -1,6 +1,6 @@
 
-from famodel.anchors.anchor import Anchor
-from famodel.anchors.anchors_famodel.support_plots import plot_load
+from fad.anchors.anchor import Anchor
+from fad.anchors.anchors_famodel.support_plots import plot_load
 
 # --- Define soil profile ---
 profile_map = [

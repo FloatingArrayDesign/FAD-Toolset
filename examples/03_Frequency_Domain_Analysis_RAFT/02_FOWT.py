@@ -6,14 +6,17 @@ This file then adds a wave spectrum to run, analyzes that case, and plots the re
 For more information on using RAFT, please see RAFT documentation at https://github.com/WISDEM/RAFT
 """
 
-from famodel import Project
+from fad import Project
 import matplotlib.pyplot as plt
 import os
-from famodel.helpers import createRAFTDict
+from fad.helpers import createRAFTDict
 
 # define name of ontology input file
 dir = os.path.dirname(os.path.realpath(__file__))
 input_file = os.path.join(dir,'02_FOWT.yaml')
+
+# define an output file to store RAFT results in
+RAFT_outfile = os.path.join(dir,'02_FOWT_RAFT_results.xlsx')
 
 # initialize Project class with input file
 project = Project(file=input_file,raft=True)
@@ -46,5 +49,10 @@ raft_model.analyzeCases(display=True) # display what's happening for fun
 # plot RAFT results
 raft_model.plotResponses()
 raft_model.plot()
+
+# record the results to an excel file
+project.mapRAFTResults() # first need to map results to the project class
+print(f'Writing RAFT results to excel file {RAFT_outfile}')
+project.generateSheets(RAFT_outfile)
 
 plt.show()

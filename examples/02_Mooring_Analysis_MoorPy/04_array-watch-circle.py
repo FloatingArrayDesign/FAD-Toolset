@@ -7,7 +7,7 @@ array with moorings and dynamic cables (static cables are not modeled in MoorPy)
 For more information on MoorPy, please see MoorPy documentation at https://github.com/NREL/MoorPy
 """
 
-from famodel import Project
+from fad import Project
 import matplotlib.pyplot as plt
 import os
 

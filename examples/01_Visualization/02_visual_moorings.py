@@ -7,7 +7,7 @@ of the turbine locations and moorings (no cables, platform design, turbines,
                                        site condition information, etc.)
 """
 
-from famodel import Project
+from fad import Project
 import matplotlib.pyplot as plt
 import os
 

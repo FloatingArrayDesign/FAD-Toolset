@@ -6,7 +6,7 @@ Created on Mon Jul 14 13:33:12 2025
 """
 import pytest
 import os
-from famodel import Project
+from fad import Project
 import numpy as np
 from copy import deepcopy
 from numpy.testing import assert_allclose

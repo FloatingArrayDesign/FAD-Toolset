@@ -1,0 +1,509 @@
+type: draft/example of floating array ontology under construction
+name: 
+comments: 
+# Site condition information
+site:
+    general:
+        water_depth : 600        # [m]      uniform water depth
+        rho_water   : 1025.0     # [kg/m^3] water density
+        rho_air     : 1.225      # [kg/m^3] air density
+        mu_air      : 1.81e-05   #          air dynamic viscosity
+    
+    
+    seabed:
+        x : [-1901,    0,    1900]
+        y : [-1900,     2,  1900 ]
+        
+        type_array:
+          - [mud_soft ,  mud_firm ,   mud_soft]  
+          - [mud_soft ,  mud_soft ,   mud_soft]  
+          - [mud_soft ,  mud_firm ,   mud_soft]  
+
+        soil_types:   # dictionary-based approach
+          mud_soft:
+            Su0 : [2.39]  # [kPa]
+            k : [1.41]    # [kPa/m]
+            depth: [0]    # [m]
+          mud_firm:
+            Su0 : [23.94] # [kPa]
+            k : [2.67]    # [kPa/m]
+            depth: [0]    # [m]
+          rock:
+            UCS : [7]     # [MPa]
+            Em  : [50]    # [MPa]
+            depth: [0]    # [m]   
+    
+        
+    RAFT_cases:
+        keys : [wind_speed, wind_heading, turbulence, turbine_status, yaw_misalign, wave_spectrum, wave_period, wave_height, wave_heading  ]
+        data :  #   m/s        deg    % or e.g. IIB_NTM    string            deg         string          (s)         (m)         (deg)
+            -  [    10.5,         0,            0.01,    operating,          0,        JONSWAP,         12,         6,         0       ]
+
+    RAFT_settings:   
+        min_freq     :  0.001    #  [Hz]       lowest frequency to consider, also the frequency bin width     
+        max_freq     :  0.10    #  [Hz]       highest frequency to consider
+        XiStart      :   0      # sets initial amplitude of each DOF for all frequencies
+        nIter        :   4      # sets how many iterations to perform in Model.solveDynamics()
+        
+    marine_growth:
+        keys: [thickness, lowerRange, upperRange, density]
+        data:   #  (m)       (m)          (m)     (kg/m^3)
+          - [0.00,-600,-200, 1325]
+          - [0.05,-200,-80, 1325]
+          - [0.10,-80,-40, 1325]
+          - [0.20,-40,0, 1325]
+        buoys: [0.1,0.1]
+# ----- Array-level inputs -----
+
+# Wind turbine array layout
+array:
+    keys : [ID, topsideID, platformID, mooringID,   x_location,     y_location,   heading_adjust]
+    data : #    ID#        ID#        ID#          [m]             [m]           [deg]
+        -  [FOWT1,     1,         1,         ms3,          0,         0,          180   ]    # 2 array, shared moorings
+        -  [FOWT2,     1,         1,         ms2,          1600,           0,            0   ] 
+        -  [FOWT3,     1,         1,         ms1,          0,           1700.4577,            180   ]
+        -  [FOWT4,     1,         1,         ms4,          1600,        1700.4577,             180]
+
+
+# Array-level mooring system (in addition to any per-turbine entries later)
+array_mooring:
+    anchor_keys :
+          [ID, type,  x,  y,  embedment ]
+    anchor_data :
+        - [  Anch1,  suction_pile1, -829  , 850.22887  ,  2   ]
+          
+    line_keys : 
+          [MooringConfigID  ,  endA,   endB,  fairleadA, fairleadB, lengthAdjust]
+    line_data :
+        - [ rope_shared_bridle   ,  FOWT1,  FOWT2,  [4,5], [4,5], 0]
+        - [ rope_1   ,  Anch1,  FOWT1, NONE,   2,  0]
+        - [ rope_1   ,  Anch1,  FOWT3, NONE,  1,  0]
+
+
+# Array cables (compact table format, without routing info)
+array_cables:   
+    keys:  [ AttachA,  AttachB,  DynCableA,  DynCableB,  headingA, headingB, cableType, lengthAdjust]
+    data: 
+      - [ FOWT1, FOWT3, suspended_1, NONE, 180,  0,   NONE, 0]
+      - [ FOWT3, FOWT4,  lazy_wave1, lazy_wave1, 290,   70, static_cable_36, 0] 
+
+# ----- Mooring system -----
+
+# Mooring system descriptions (each for an individual FOWT with no sharing)
+mooring_systems:
+ 
+    ms1:
+        name: 3-line semi-taut polyester mooring system with one line shared anchor
+        
+        keys: [MooringConfigID,  heading, anchorType, fairlead] 
+        data:
+          - [  rope_1_bridle,   270 ,    suction_pile1,   [4,5] ]
+          - [  rope_1,  135 ,    suction_pile1,   2 ]
+
+    ms2:
+        name: 2-line semitaut with a third shared line
+        
+        keys: [MooringConfigID,  heading, anchorType, lengthAdjust] 
+        data:
+          - [  rope_1,   45 ,    suction_pile1,   0 ]
+          - [  rope_1,  135 ,    suction_pile1,   0 ]
+          
+    ms3: 
+        name: 3-line semi-taut polyester mooring system with one line shared anchor and one shared line
+        
+        keys: [MooringConfigID,  heading, anchorType, fairlead] 
+        data:
+          - [  rope_1,  45 ,    suction_pile1,   1 ]
+
+    ms4:
+        name: 3 line taut poly mooring system
+
+        keys: [MooringConfigID,  heading, anchorType, fairlead] 
+        data:
+          - [  rope_1,   45 ,    suction_pile1,   1 ]
+          - [  rope_1,  135 ,    suction_pile1,   2 ]
+          - [  rope_1,   270 ,    suction_pile1,   3 ]
+
+
+# Mooring line configurations
+mooring_line_configs:
+    
+    rope_1:  # mooring line configuration identifier
+    
+        name: rope configuration 1  # descriptive name
+        
+        span: 1131.37
+
+        
+        sections:                 #in order from anchor to fairlead
+          - type: chain_155mm
+            length: 20
+          - type: rope       # ID of a mooring line section type
+            length: 1170            # [m] usntretched length of line section
+            adjustable: True      # flags that this section could be adjusted to accommodate different spacings...
+
+    rope_1_bridle:  # mooring line configuration identifier
+    
+        name: rope configuration 1 with a bridle  # descriptive name
+        
+        span: 1131.37
+
+        
+        sections:                 #in order from anchor to fairlead
+          - type: chain_155mm
+            length: 20
+          - type: rope       # ID of a mooring line section type
+            length: 500            # [m] usntretched length of line section
+          - connectorType: triplate
+          - subsections: # double chain section
+            - - mooringFamily: chain
+                d_nom: 0.1      
+                length: 120            
+            - - mooringFamily: chain  
+                d_nom: 0.1    
+                length: 120  
+          - connectorType: triplate          
+          - type: rope       # ID of a mooring line section type
+            length: 500            # [m] usntretched length of line section
+          - subsections:  # bridle sections for end B
+              - - type: rope
+                  length: 50
+                - connectorType: shackle
+              - - type: rope
+                  length: 50
+                - connectorType: shackle
+
+    rope_shared_bridle:
+        name: shared rope with a bridle on each end
+        
+        span: 1484
+
+        
+        sections:
+          - subsections:  # bridle sections for end A
+              - - connectorType: shackle
+                - type: rope
+                  length: 50
+              - - connectorType: shackle
+                - type: rope
+                  length: 50
+          - type: rope
+            length: 100
+          - connectorType: clump_weight_80
+          - type: rope
+            length: 1172
+          - connectorType: clump_weight_80
+          - type: rope
+            length: 100
+          - subsections:  # bridle sections for end B
+              - - type: rope
+                  length: 50
+                - connectorType: shackle
+              - - type: rope
+                  length: 50
+                - connectorType: shackle
+
+    rope_shared:
+        name: shared rope 
+        
+        span: 1484
+
+        
+        sections:
+          - type: rope
+            length: 150
+          - connectorType: clump_weight_80
+          - type: rope
+            length: 1172
+          - connectorType: clump_weight_80
+          - type: rope
+            length: 150
+
+    
+    
+# Mooring line cross-sectional properties
+mooring_line_types:
+
+    rope:
+        d_nom:    0.2246
+        d_vol:    0.1797
+        m:        34.85
+        EA:       4.761e7
+        MBL:    11.75e6
+        material: rope        
+        
+    chain_155mm:
+        d_nom:    0.155      # [m] nominal diameter
+        d_vol:    0.279      # [m] volume-equivalent diameter
+        m:        480.9      # [kg/m] mass per unit length (linear density)
+        EA:      2058e6      # [N] quasi-static stiffness
+        MBL:     25.2e6      # [N] minimum breaking load
+        cost:      1486      # [$/m] cost per unit length
+        material:  chain  # [-] material composition descriptor
+        material details: R3 studless
+
+
+# Mooring connector properties
+mooring_connector_types:
+        
+    clump_weight_20:
+        m   : 20000  # [kg]
+        v :  0.8   # [m^3]
+        
+    clump_weight_80:
+        m   : 80000  # [kg]
+        v   :  0.0   # [m^3]
+        
+    buoy_10:
+        m   :  560   # [kg]  component mass
+        v   : 10.2   # [m^3] component volumetric displacement
+        CdA    :  3.5   # [m^2] produce of cross sectional area and drag coefficient
+    
+    shackle:
+        m   : 200
+        v   : .2
+    
+    triplate:
+        m   : 1000
+        v   : 0.1
+        # note: triplate is a connector that connects three mooring lines together, e.g., for a double chain section
+
+# Anchor type properties
+anchor_types:
+  suction_pile1:
+    type   :  suction
+    L      :     16.4  # length of pile [m]
+    D      :     5.45  # diameter of pile [m]
+    zlug   :     9.32  # embedded depth of padeye [m]
+
+cables:
+
+    - name: array_cable1
+      type: static_cable_36
+      endA: 
+          attachID: FOWT1            # FOWT/substation/junction ID
+          heading:  260                  # [deg] heading of attachment at end A
+          dynamicID: lazy_wave1  # ID of dynamic cable configuration at this end
+          rJTube : 5 # [m] radial distance from center of platform that J-tube is located
+      endB:
+          attachID: FOWT2
+          heading: 280
+          dynamicID: lazy_wave1
+      routing_x_y_r:
+          - [700,150,20] # [x (m), y (m), radius (m)]
+          - [900,150,20]
+      burial:
+          station: [0, 1]                # length along cable, normalized by first and last value
+          depth  : [0.1, 0.2]            # [m] burial depth
+
+
+# Dynamic and static cable configurations
+dynamic_cable_configs:
+# contains the subsections that make up each section of the subsea cable (i.e., what sections make up the lazywave cable in array_cable_1)
+    lazy_wave1:
+        name: basic cable configuration, essentially a straight line between platforms
+        span: 600
+        voltage: 66 #[kV]
+        cable_type: dynamic_cable_33
+        length: 900
+        A: 100 # cable conductor cross-sectional area [mm^2] (Required for types listed in cable props yaml)
+        rJTube : 5 # [m] radial distance from center of platform that J-tube is located
+
+        sections: 
+          - type: Buoyancy_750m #_w_buoy # (section properties including averaged effect of buoyancy modules)
+            L_mid: 450 # [m] from end A
+            N_modules: 5
+            spacing: 21 # [m]
+            V: 2 
+          - type: joint_1 
+    
+    suspended_1:
+        name: Dynamic suspended cable configuration 1 
+        voltage: 33 
+        span: 1500
+        rJTube : 58 # [m] radial distance from center of platform that J-tube is located         
+        cable_type: dynamic_cable_33        # ID of a cable section type1
+        A: 300
+        length: 1650                   # [m] length (unstretched)
+            
+        sections:            
+          
+          - type: Buoyancy_750m #_w_buoy # (section properties including averaged effect of buoyancy modules)
+            L_mid: 625 # [m] from end A
+            N_modules: 5
+            spacing: 21 # [m]
+            V: 2
+            
+          - type: Buoyancy_750m #_w_buoy # (section properties including averaged effect of buoyancy modules)
+            L_mid: 1025 # [m] from end A
+            N_modules: 5
+            spacing: 21 # [m]
+            V: 2
+            
+# Cable cross-sectional properties
+cable_types:
+
+    cable1: # random values of basic properties (these will be overwritten by cable layout optimization)
+        dynamic: True
+        kV   :        66   # [kV] voltage rating
+        A    :       300   # [mm^2] cross-sectional area of each conductor (3 conductors)
+        d    :      0.20   # [m] outer diameter
+        m    :     30.59   # [kg/m] mass per unit length
+        EA   :    700000   # [kN] axial stiffness 
+        EI   :      10.0   # [kN.m^2] bending stiffness
+        MBL  :       100   # [kN] minimum breaking load
+        MBR  :       2.0   # [m] minimum bending radius
+        voltage:     36
+
+    static_cable_36:
+  
+        dynamic :  False   # Flag for dynamic cable (default static)
+        DC   :     False   # Flag for DC (default AC)
+        kV   :        36   # [kV] voltage rating
+        A    :       300   # [mm^2] cross-sectional area of each conductor (3 conductors)
+        d    :    0.1248   # [m] outer diameter
+        m    :     12.90   # [kg/m] mass per unit length
+        EA   :    245000   # [kN] axial stiffness 
+        EI   :      5.10   # [kN.m^2] bending stiffness
+        MBL  :      54.0   # [kN] minimum breaking load
+        MBR  :     1.875   # [m] minimum bending radius
+        voltage:   36
+        
+# Cable appendages
+cable_appendages:
+
+    buoyancy_module_1:
+        type:    buoy
+        mass:    2700   # [kg]  mass
+        volume: 8.615   # [m^3] volumetric displacement 
+        CdA:     3.8    # [m^2] product of cross-sectional area and drag coefficient
+        length:  2.2    # [m]   length taked up along cable
+        density: 313.41
+        
+    buoyancy_module_bead:
+        type:    buoy
+        mass:    730    # [kg]
+        volume:  1.16   # [m^3]
+        density: 629    # [kg/m^3]
+
+    joint_1:
+        type: joint
+        mass: 100000 # TBD
+
+
+# ----- turbines and platforms -----
+
+topsides:
+    
+  - !include ../Common_Inputs/IEA-15-240-RWT.yaml
+  
+platforms:
+
+  - potModMaster :   1      # [int] master switch for potMod variables; 0=keeps all member potMod vars the same, 1=turns all potMod vars to False (no HAMS), 2=turns all potMod vars to True (no strip)
+    dlsMax       :  5.0     # maximum node splitting section amount for platform members; can't be 0
+    rFair        :  40.5    # platform fairlead radius
+    zFair        :  -20     # platform fairlead z-location
+    type         :  FOWT
+    fairleads    : 
+                   # list of fairlead coordinates for the platform relative to platform coordinate and 0-degree heading
+                   - name: fairlead1
+                     r_rel: [58, 0, -14] # relative coordinates of fairlead to platform center
+                     headings: [30, 150, 270] # headings in degrees for the fairlead (if multiple headings, the fairlead will be repeated for each heading)  
+                   - name: fairleads2
+                     r_rel: [-57.779,-5.055, -14]
+                   - name: fairleads3
+                     r_rel: [-57.779, 5.055, -14]
+    rFair        :  40.5    # platform fairlead radius
+    zFair        :  -20     # platform fairlead z-location
+    type         :  FOWT
+    
+    members:   # list all members here
+        
+      - name      :  center_column             # [-]    an identifier (no longer has to be number)       
+        type      :  rigid                         # [-]    
+        rA        :  [ 0, 0, -20]              # [m]    end A coordinates
+        rB        :  [ 0, 0,  15]              # [m]    and B coordinates
+        shape     :  circ                      # [-]    circular or rectangular
+        gamma     :  0.0                       # [deg]  twist angle about the member's z-axis
+        potMod    :  False                      # [bool] Whether to model the member with potential flow (BEM model) plus viscous drag or purely strip theory
+        # --- outer shell including hydro---
+        stations  :  [0, 1]                    # [-]    location of stations along axis. Will be normalized such that start value maps to rA and end value to rB
+        d         :  10.0                      # [m]    diameters if circular or side lengths if rectangular (can be pairs)
+        t         :  0.05                      # [m]    wall thicknesses (scalar or list of same length as stations)
+        Cd        :  0.6                       # [-]    transverse drag coefficient       (optional, scalar or list of same length as stations)
+        Ca        :  0.93                      # [-]    transverse added mass coefficient (optional, scalar or list of same length as stations)
+        CdEnd     :  0.6                       # [-]    end axial drag coefficient        (optional, scalar or list of same length as stations)
+        CaEnd     :  1.0                       # [-]    end axial added mass coefficient  (optional, scalar or list of same length as stations)
+        rho_shell :  7850                      # [kg/m3] 
+        # --- handling of end caps or any internal structures if we need them ---
+        cap_stations :  [ 0    ]               # [m]  location along member of any inner structures (in same scaling as set by 'stations')
+        cap_t        :  [ 0.001  ]             # [m]  thickness of any internal structures
+        cap_d_in     :  [ 0    ]               # [m]  inner diameter of internal structures (0 for full cap/bulkhead, >0 for a ring shape)
+
+        
+      - name      :  outer_column              # [-]    an identifier (no longer has to be number)       
+        type      :  rigid                         # [-]    
+        rA        :  [51.75, 0, -20]           # [m]    end A coordinates
+        rB        :  [51.75, 0,  15]           # [m]    and B coordinates
+        heading   :  [ 60, 180, 300]           # [deg]  heading rotation of column about z axis (for repeated members)
+        shape     :  circ                      # [-]    circular or rectangular
+        gamma     :  0.0                       # [deg]  twist angle about the member's z-axis
+        potMod    :  False                      # [bool] Whether to model the member with potential flow (BEM model) plus viscous drag or purely strip theory
+        # --- outer shell including hydro---
+        stations  :  [0, 35]                   # [-]    location of stations along axis. Will be normalized such that start value maps to rA and end value to rB
+        d         :  12.5                      # [m]    diameters if circular or side lengths if rectangular (can be pairs)
+        t         :  0.05                      # [m]    wall thicknesses (scalar or list of same length as stations)
+        Cd        :  0.6                       # [-]    transverse drag coefficient       (optional, scalar or list of same length as stations)
+        Ca        :  0.93                      # [-]    transverse added mass coefficient (optional, scalar or list of same length as stations)
+        CdEnd     :  1.0                       # [-]    end axial drag coefficient        (optional, scalar or list of same length as stations)
+        CaEnd     :  0.7 # value of 3.0 gives more heave response        # [-]    end axial added mass coefficient  (optional, scalar or list of same length as stations)
+        rho_shell :  7850                      # [kg/m3] 
+        # --- ballast ---
+        l_fill    :  1.4                       # [m]
+        rho_fill  :  5000                      # [kg/m3]
+        # --- handling of end caps or any internal structures if we need them ---
+        cap_stations :  [ 0    ]               # [m]  location along member of any inner structures (in same scaling as set by 'stations')
+        cap_t        :  [ 0.001  ]             # [m]  thickness of any internal structures
+        cap_d_in     :  [ 0    ]               # [m]  inner diameter of internal structures (0 for full cap/bulkhead, >0 for a ring shape)
+
+        
+      - name      :  pontoon                   # [-]    an identifier (no longer has to be number)       
+        type      :  rigid                         # [-]    
+        rA        :  [  5  , 0, -16.5]         # [m]    end A coordinates
+        rB        :  [ 45.5, 0, -16.5]         # [m]    and B coordinates
+        heading   :  [ 60, 180, 300]           # [deg]  heading rotation of column about z axis (for repeated members)
+        shape     :  rect                      # [-]    circular or rectangular
+        gamma     :  0.0                       # [deg]  twist angle about the member's z-axis
+        potMod    :  False                     # [bool] Whether to model the member with potential flow (BEM model) plus viscous drag or purely strip theory
+        # --- outer shell including hydro---
+        stations  :  [0, 40.5]                 # [-]    location of stations along axis. Will be normalized such that start value maps to rA and end value to rB
+        d         :  [12.4, 7.0]               # [m]    diameters if circular or side lengths if rectangular (can be pairs)
+        t         :  0.05                      # [m]    wall thicknesses (scalar or list of same length as stations)
+        Cd        :  [1.5, 2.2 ]               # [-]    transverse drag coefficient       (optional, scalar or list of same length as stations)
+        Ca        :  [2.2, 0.2 ]               # [-]    transverse added mass coefficient (optional, scalar or list of same length as stations)
+        CdEnd     :  0.0                       # [-]    end axial drag coefficient        (optional, scalar or list of same length as stations)
+        CaEnd     :  0.0                       # [-]    end axial added mass coefficient  (optional, scalar or list of same length as stations)
+        rho_shell :  7850                      # [kg/m3]
+        l_fill    :  40.5                      # [m]
+        rho_fill  :  1025.0                    # [kg/m3]
+        
+        
+      - name      :  upper_support             # [-]    an identifier (no longer has to be number)       
+        type      :  rigid                         # [-]    
+        rA        :  [  5  , 0, 14.545]        # [m]    end A coordinates
+        rB        :  [ 45.5, 0, 14.545]        # [m]    and B coordinates
+        heading   :  [ 60, 180, 300]           # [deg]  heading rotation of column about z axis (for repeated members)
+        shape     :  circ                      # [-]    circular or rectangular
+        gamma     :  0.0                       # [deg]  twist angle about the member's z-axis
+        potMod    :  False                     # [bool] Whether to model the member with potential flow (BEM model) plus viscous drag or purely strip theory
+        # --- outer shell including hydro---
+        stations  :  [0, 1]                    # [-]    location of stations along axis. Will be normalized such that start value maps to rA and end value to rB
+        d         :  0.91                      # [m]    diameters if circular or side lengths if rectangular (can be pairs)
+        t         :  0.01                      # [m]    wall thicknesses (scalar or list of same length as stations)
+        Cd        :  0.0                       # [-]    transverse drag coefficient       (optional, scalar or list of same length as stations)
+        Ca        :  0.0                       # [-]    transverse added mass coefficient (optional, scalar or list of same length as stations)
+        CdEnd     :  0.0                       # [-]    end axial drag coefficient        (optional, scalar or list of same length as stations)
+        CaEnd     :  0.0                       # [-]    end axial added mass coefficient  (optional, scalar or list of same length as stations)
+        rho_shell :  7850                      # [kg/m3] 
+
+

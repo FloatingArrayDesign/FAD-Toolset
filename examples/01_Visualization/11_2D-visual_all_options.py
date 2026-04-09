@@ -4,7 +4,7 @@ Simple driver file to create 2D plots exploring the different settings options
 for plot2d().
 """
 
-from famodel import Project
+from fad import Project
 import matplotlib.pyplot as plt
 import os
 

@@ -8,12 +8,12 @@ from pytest import approx
 import numpy as np
 from numpy.testing import assert_allclose
 
-from famodel.project import Project
+from fad.project import Project
 
-from famodel.platform.fairlead import Fairlead
-from famodel.platform.platform import Platform
-from famodel.mooring.connector import Section, Connector
-from famodel.famodel_base import Node, Edge
+from fad.platform.fairlead import Fairlead
+from fad.platform.platform import Platform
+from fad.mooring.connector import Section, Connector
+from fad.famodel_base import Node, Edge
 
 import os
 
@@ -147,7 +147,7 @@ def test_bridle_end_locs(bridle_project):
     for sub in moor.subcons_B:
         att = [att['obj'] for att in sub.attachments.values() if isinstance(att['obj'],Fairlead)]
         fl_locs.append(att[0].r)
-    from famodel.helpers import calc_midpoint
+    from fad.helpers import calc_midpoint
     midpoint = calc_midpoint(fl_locs)
     assert_allclose(midpoint, moor.rB)
     # check 

@@ -19,9 +19,10 @@ platform:
   type         :  FOWT
   Jtubes       :
                 - name: Jtube1
-                  r   : 5
-                  z   : -20
+                  r   : 5 # radius [m] of the Jtube from the center of the platform
+                  z   : -20 # depth of the Jtube attachment point on the platform (negative value) [m]
                   headings : [90, 210, 330] # headings in degrees for the Jtube (if multiple headings, the Jtube will be repeated for each heading)
+                  # See 01_Fairleads to understand how the rotation of fairleads works.
 
 # Array cables 
 array_cables:   
@@ -38,11 +39,11 @@ dynamic_cable_configs:
         voltage: 66 # [kV]
         span : 195    # [m] horizontal distance to end of dynamic cable from attachment point
         A: 300  # cable conductor area [mm^2]
-        cable_type: dynamic_cable_66       # ID of a cable section type from famodel/cables/cableProps_default.yaml. Cable props loaded automatically from this!
+        cable_type: dynamic_cable_66       # ID of a cable section type from fad/cables/cableProps_default.yaml. Cable props loaded automatically from this!
         length: 353.505                   # [m] length (unstretched) 
        
         sections: 
-          - type: Buoyancy_750m # name of buoy type from famodel/cables/cableProps_default.yaml - buoy design info read in automatically from this!
+          - type: Buoyancy_750m # name of buoy type from fad/cables/cableProps_default.yaml - buoy design info read in automatically from this!
             L_mid: 200 # [m] from platform connection
             N_modules: 6
             spacing: 11.23 # [m]
@@ -53,7 +54,7 @@ dynamic_cable_configs:
         name: Dynamic suspended cable configuration 1 
         voltage: 33 # [kV]
         span: 1512    # [m]
-        cable_type: dynamic_cable_66        # ID of a cable section type from famodel/cables/cableProps_default.yaml. Cable props loaded automatically from this!
+        cable_type: dynamic_cable_66        # ID of a cable section type from fad/cables/cableProps_default.yaml. Cable props loaded automatically from this!
         A: 300 # cable conductor area [mm^2]
         length: 1650                   # [m] length (unstretched)
             

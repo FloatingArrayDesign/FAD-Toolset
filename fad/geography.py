@@ -129,9 +129,8 @@ def getLeaseCoords(lease_name):
         raise ValueError(f"The lease area name '{lease_area}' is not supported yet")
     
     # extract the longitude and latitude coordinates of the lease area
-    #area_longs, area_lats = lease_area.geometry.unary_union.exterior.coords.xy
-    area_longs, area_lats = lease_area.geometry.union_all().exterior.coords.xy
-
+    area_longs, area_lats = lease_area.geometry.unary_union.exterior.coords.xy
+    #area_longs, area_lats = lease_area.geometry.union_all().exterior.coords.xy
 
     # calculate the centroid of the lease area
     centroid = ( lease_area.geometry.centroid.values.x[0], lease_area.geometry.centroid.values.y[0] )
@@ -346,6 +345,14 @@ def writeBathymetryFile(moorpy_bathymetry_filename, bathXs, bathYs, bath_depths,
             else:
                 f.write(f'{bath_depths[iy,id]:8.3f} ')
         f.write('\n')
+    if soil:    # add placeholder soil properties - these will need to be adjusted with future changes
+        f.write('--- SOIL TYPES ---\n')
+        f.write('Class\t\tGamma\tSu0\tk\talpha\tphi\tUCS\tEm\n')
+        f.write('(name)\t\t(kN/m^3)\t(kPa)\t(kPa/m)\t(-)\t(deg)\t(MPa)\t(MPa)\n')
+        f.write('mud\t\t4.7\t2.39\t1.41\t0.7\t-\t-\t-\n')
+        f.write('mud_firm\t4.7\t23.94\t2.67\t0.7\t-\t-\t-\n')
+        f.write('hard\t\t-\t-\t-\t-\t-\t7\t50\n')
+        f.write('------------------\n')
     #for i, y in enumerate(grid_y):         # alternative writing version
         #row = [y] + list(grid_depth[i, :])
         #f.write(" ".join(map(str, row)) + "\n")
@@ -602,6 +609,109 @@ def getSoilGrid(centroid, latlong_crs, custom_crs, soil_file, nrows=100, ncols=1
     return xs, ys, soil_grid
         
 
+def loadSpeciesData(species_filename, centroid, latlong_crs, custom_crs, grid_x=None, grid_y=None, grid_depth=None):
+    '''Load species data from CSV file with latitude/longitude coordinates and map to grid
+    
+    Parameters
+    ----------
+    species_filename : str
+        Path to CSV file containing species data
+        Required to be in the format from https://www.ncei.noaa.gov/maps/deep-sea-corals-portal/?page=Page&views=Basic%2CSummary
+    centroid : tuple
+        Project centroid (lon, lat) for coordinate conversion
+    latlong_crs : pyproj.CRS
+        Latitude/longitude coordinate reference system
+    custom_crs : str or pyproj.CRS
+        Target coordinate reference system for conversion
+    grid_x : array, optional
+        X-coordinates of grid lines [m]. If None, grid-bounds filtering is skipped.
+    grid_y : array, optional
+        Y-coordinates of grid lines [m]. If None, grid-bounds filtering is skipped.
+    grid_depth : array, optional
+        Depth grid for reference (if None, creates a dummy grid)
+        
+    Returns
+    -------
+    species_data : pandas.DataFrame
+        Loaded species data with columns added: x_local, y_local,
+        depth_bathy (if grid_depth provided), accuracy_m, obs_date.
+    '''
+    
+    required_columns = ['VernacularNameCategory', 'latitude (degrees_north)',
+                        'longitude (degrees_east)', 'DepthInMeters (m)', 'ObservationDate','LocationAccuracy (m)']
+
+    # Load CSV data
+    species_data = pd.read_csv(species_filename)
+    
+    # Check that required columns exist
+    missing_columns = [col for col in required_columns if col not in species_data.columns]
+    if missing_columns:
+        raise ValueError(f"Missing required columns in CSV file: {missing_columns}")
+        
+    # Remove any rows with missing coordinates or species data
+    initial_count = len(species_data)
+    species_data = species_data.dropna(subset=['latitude (degrees_north)', 
+                                                'longitude (degrees_east)', 
+                                                'VernacularNameCategory'])
+    final_count = len(species_data)
+    
+    if final_count < initial_count:
+        print(f"Removed {initial_count - final_count} rows with missing coordinate or species data")
+        
+    if final_count == 0:
+        print("Warning: No valid species data found after removing missing data")
+        return None
+        
+    # Convert lat/lon to local coordinates
+    xs, ys = convertLatLong2Meters(
+                    longs=species_data['longitude (degrees_east)'].values,
+                    lats=species_data['latitude (degrees_north)'].values,
+                    centroid=centroid,
+                    latlong_crs=latlong_crs,
+                    target_crs=custom_crs
+                )
+                
+    # Store local coordinates in the dataframe
+    species_data = species_data.copy()  # Avoid SettingWithCopyWarning
+    species_data['x_local'] = xs
+    species_data['y_local'] = ys
+    
+    # Remove species data that falls outside the grid bounds (if grid provided)
+    if grid_x is not None and grid_y is not None:
+        x_min, x_max = grid_x[0], grid_x[-1]
+        y_min, y_max = grid_y[0], grid_y[-1]
+        before_trim = len(species_data)
+        species_data = species_data[
+            (species_data['x_local'] >= x_min) & (species_data['x_local'] <= x_max) &
+            (species_data['y_local'] >= y_min) & (species_data['y_local'] <= y_max)
+        ].copy()
+        after_trim = len(species_data)
+        if after_trim < before_trim:
+            print(f"Removed {before_trim - after_trim} records outside grid bounds")
+        
+        if len(species_data) == 0:
+            print("Warning: No species data remaining after grid-bounds filtering")
+            return None
+    
+    # Parse LocationAccuracy into numeric meters (e.g., '>1000m' -> 1000)
+    def parse_accuracy(val):
+        if pd.isna(val):
+            return np.nan
+        s = str(val).strip().lower().replace('>', '').replace('m', '').strip()
+        try:
+            return float(s)
+        except ValueError:
+            return np.nan
+    species_data['accuracy_m'] = species_data['LocationAccuracy (m)'].apply(parse_accuracy)
+    
+    # Parse ObservationDate to datetime
+    species_data['obs_date'] = pd.to_datetime(
+        species_data['ObservationDate'], errors='coerce')
+            
+    print(f"Successfully loaded {len(species_data)} species records")
+    print(f"Unique species categories: {species_data['VernacularNameCategory'].nunique()}")
+    
+    return species_data
 
 
 if __name__ == '__main__':

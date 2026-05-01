@@ -358,7 +358,7 @@ class LinearSystem():
         # values for ten__w, kl__w, and kt__kl for each mooring object assuming a continuous catenary line
         
     
-    def preprocess(self, plots=0, display=0):
+    def preprocess(self, plots=0, display=0, rcond=0.0001):
         '''Initializes things...
         
         Does all the things that can be done once the lineDesign characteristics are set (f/l/k and f/w)
@@ -410,10 +410,10 @@ class LinearSystem():
         '''based on structure and tension matrices, calculatesd self.Knobs_k, which is used by c_to_k when optimizing stiffness.'''
     
         # Null space of Structure Matrix
-        N1 = scipy.linalg.null_space(self.StructureMatrix)#, rcond = 0.0001)
+        N1 = scipy.linalg.null_space(self.StructureMatrix, rcond=rcond)
         
         # null space of N1 augmented with tension matrix 
-        N2 = scipy.linalg.null_space(np.hstack([N1, -self.TensionMatrix])) #, rcond = 0.0001)
+        N2 = scipy.linalg.null_space(np.hstack([N1, -self.TensionMatrix]), rcond=rcond)
         #N2 = scipy.linalg.null_space(np.append(N1, -self.TensionMatrix,1))#, rcond = 0.0001)
         
         # nullspace matrix containing basis vectors of valid line weight solutions for equilibrium given line groupings 

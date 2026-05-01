@@ -112,6 +112,7 @@ class Project():
         self.grid_y      = np.array([0])  # coordinates of y grid lines [m]
         self.depth = depth
         self.grid_depth  = np.array([[self.depth]])  # depth at each grid point [iy, ix]
+        self.grid_slope  = None  # seabed slope angle at each grid point [deg] (computed from grid_depth)
         
         # soil parameters at each grid point
         self.soilProps = {}
@@ -125,6 +126,9 @@ class Project():
         self.soil_phi   = np.zeros((1,1))  # angle of internal friction [deg] (sand soils)
         self.soil_x     = None
         self.soil_y     = None
+        
+        # species data
+        self.species_data = None       # DataFrame of species records (from geography.loadSpeciesData)
         
         # MoorPy system associated with the project
         self.ms  = None
@@ -1122,6 +1126,48 @@ class Project():
             return z
 
 
+    def computeSlopeGrid(self):
+        '''Compute seabed slope angle grid from the bathymetry depth grid
+        and store it in self.grid_slope. Uses np.gradient for fast
+        vectorized computation over the entire grid.
+        
+        Returns
+        -------
+        grid_slope : 2D array
+            Seabed slope angle at each grid point [deg]
+        '''
+        if len(self.grid_x) < 2 or len(self.grid_y) < 2:
+            raise ValueError('Need at least a 2x2 bathymetry grid to compute slopes.')
+        
+        dy, dx = np.gradient(self.grid_depth, self.grid_y, self.grid_x)
+        self.grid_slope = np.degrees(np.arctan(np.sqrt(dx**2 + dy**2)))
+        
+        return self.grid_slope
+
+
+    def getSlopeAtLocation(self, x, y):
+        '''Interpolate the seabed slope angle at a specified x-y location
+        from the slope grid. Computes the slope grid first if it hasn't
+        been computed yet.
+        
+        Parameters
+        ----------
+        x, y : float
+            x and y coordinates to query [m]
+        
+        Returns
+        -------
+        slope : float
+            Seabed slope angle at the location [deg]
+        '''
+        if self.grid_slope is None:
+            self.computeSlopeGrid()
+        
+        slope, _, _, _, _ = sbt.interpFromGrid(x, y, self.grid_x, self.grid_y,
+                                                self.grid_slope)
+        return slope
+
+
     def seabedIntersect(self, r, u):
         '''
         Compute location at which a ray (defined by coordinate i and direction
@@ -1622,7 +1668,21 @@ class Project():
                 for sub in cab.subcomponents():
                     if isinstance(sub,Joint):
                         sub.r[2] = -self.getDepthAtLocation(sub.r[0],sub.r[1])
-                
+    
+
+    def loadSpeciesData(self, species_data):
+        '''Store species data that has been loaded and processed
+        (e.g., by geography.loadSpeciesData).
+        
+        Parameters
+        ----------
+        species_data : pandas.DataFrame
+            DataFrame of species records with columns including
+            x_local, y_local, accuracy_m, obs_date, VernacularNameCategory.
+        '''
+        self.species_data = species_data
+
+
     def addPlatform(self,r=[0,0,0], id=None, phi=0, entity='', 
                     rFair=58, zFair=-14, **kwargs):
         '''
@@ -2151,32 +2211,137 @@ class Project():
     def plot2d(self, ax=None, plot_soil=False,
                plot_bathymetry=True, plot_boundary=True, color_lineDepth=False, 
                plot_bathymetry_contours=False, bare=False, axis_equal=True,
-               save=False,**kwargs):
-        '''Plot aspects of the Project object in matplotlib in 3D.
+               save=False, plot_species=False, plot_seabed_slope=False, **kwargs):
+        '''Plot aspects of the Project object in matplotlib in 2D.
         
         TODO - harmonize a lot of the seabed stuff with MoorPy System.plot...
         
         Parameters
         ----------
-        ...
-        ax : matplotlib.pyplot axis
-            Default is None
-        plot_soil : bool
-            If True, plot soil conditions
-        plot_bathymetry : bool
-            If True, plot bathymetry 
-        plot_boundary : bool
-            If True, plot lease area boundary
-        plot_bathy_contours : bool
-            If True, plot bathymetry line contours
-        axis_equal : bool
-            If True, set axes to equal scales to prevent visual distortions
-        save : bool
-            If True, save the figure
-        bare : bool
-            If True, supress display of extra labeling like the colorbar.
-        color_lineDepth: bool
-            If True, color mooring lines based on depth. Only works if plot_bathymetry=False.
+        ax : matplotlib.axes.Axes, default None
+            Axes to plot on. If None, a new figure and axes are created.
+        plot_soil : bool, default False
+            Plot soil type grid.
+        plot_bathymetry : bool, default True
+            Plot bathymetry depth contours.
+        plot_boundary : bool, default True
+            Plot lease area boundary and exclusion zones.
+        color_lineDepth : bool, default False
+            Color mooring lines by depth. Only works if plot_bathymetry=False.
+        plot_bathymetry_contours : bool, default False
+            Plot bathymetry as line contours (can overlay on other backgrounds).
+        bare : bool, default False
+            Suppress colorbars and extra labeling.
+        axis_equal : bool, default True
+            Set axes to equal aspect ratio.
+        save : bool, default False
+            Save the figure to a PNG file.
+        plot_species : bool, default False
+            Plot species data overlay (circles sized by accuracy).
+            Required to be in the format from https://www.ncei.noaa.gov/maps/deep-sea-corals-portal/?page=Page&views=Basic%2CSummary
+        plot_seabed_slope : bool, default False
+            Plot seabed slope angle contours (degrees).
+        
+        Keyword Arguments
+        -----------------
+        Figure & Layout:
+            figsize : tuple, default (8, 8)
+                Figure dimensions (width, height) in inches.
+            plot_legend : bool, default True
+                Show the main legend below the axes.
+            legend_x : float, default 0.5
+                Legend horizontal anchor (0=left, 1=right).
+            legend_y : float, default -0.1
+                Legend vertical anchor (negative = below axes).
+            legend_ncol : int, optional
+                Force number of legend columns (auto-calculated if omitted).
+            return_contour : bool, default False
+                If True, return (ax, contourf) instead of just ax.
+        
+        Visibility:
+            plot_platforms : bool, default True
+                Show platform markers.
+            plot_anchors : bool, default True
+                Show anchor markers.
+            plot_moorings : bool, default True
+                Show mooring lines and envelopes.
+            plot_cables : bool, default True
+                Show cable lines.
+            cable_labels : bool, default False
+                Annotate cables with their IDs.
+            plot_landmask : bool, default False
+                Mask land areas (depth > 0) in gray.
+        
+        Bathymetry:
+            depth_vmin : float, optional
+                Minimum depth for colorbar range.
+            depth_vmax : float, optional
+                Maximum depth for colorbar range.
+            bathymetry_levels : int, default 50
+                Number of bathymetry contour levels.
+        
+        Seabed Slope:
+            slope_cmap : str, default 'YlOrRd'
+                Colormap for slope contours.
+            slope_vmin : float, optional
+                Minimum slope angle for colorbar range (degrees).
+            slope_vmax : float, optional
+                Maximum slope angle for colorbar range (degrees).
+            slope_levels : int, default 20
+                Number of slope contour levels.
+            slope_threshold : float, optional
+                Mask slopes below this angle (degrees).
+        
+        Soil:
+            cmap_soil : str, optional
+                Colormap name for soil grid. Default uses YlOrRd.
+            soil_alpha : float, default 0.5
+                Transparency of soil overlay.
+        
+        Species:
+            species_colors : dict, optional
+                Category name -> RGB tuple mapping for species circles.
+            species_radius_buffer : float, default 152
+                Buffer radius (m) added to each accuracy circle.
+                https://www.bsee.gov/notices-to-lessees-ntl/notices-to-lessees/deepwater-benthic-communities
+                https://www.bsee.gov/sites/bsee.gov/files/notices-to-lessees-ntl/notices-to-lessees/09-g39.pdf
+        
+        Mooring Line Depth Coloring (requires color_lineDepth=True):
+            max_line_depth : float, optional
+                Minimum depth for line color scale (most negative).
+            only_shared : bool, default False
+                Only color shared mooring lines.
+            linewidth_multiplier : float, default 2
+                Line width scaling factor.
+        
+        Cables:
+            cmap_cables : str, optional
+                Colormap name for cable coloring. Default uses 'plasma_r'.
+            maxcableSize : float, optional
+                Max cable cross-section for color normalization (mm^2).
+        
+        Envelopes:
+            env_color : list, default [0.5, 0, 0, 0.8]
+                Edge color for platform envelopes [r, g, b, a].
+            fenv_color : list, default [0.6, 0.3, 0.3, 0.6]
+                Fill color for mooring envelopes [r, g, b, a].
+            alpha : float, default 0.5
+                Transparency for mooring envelope fill.
+        
+        View Limits:
+            xlim : tuple, optional
+                (xmin, xmax) to set axes x-limits.
+            ylim : tuple, optional
+                (ymin, ymax) to set axes y-limits.
+            zoom_boundary : bool, default False
+                Auto-zoom to lease boundary extents.
+            boundary_buffer : float, default 2500
+                Buffer around boundary when zoom_boundary=True (m).
+        
+        Returns
+        -------
+        ax : matplotlib.axes.Axes
+            The plot axes (or (ax, contourf) if return_contour=True).
         '''
      
         # Handle extra keyword arguments or use default values
@@ -2214,7 +2379,7 @@ class Project():
         # Bathymetry 
         if plot_bathymetry:
             if plot_soil:
-                raise ValueError('The bathymetry grid and soil grid cannot yet be plotted at the same time. Use plot_bathy_contours=True instead')
+                raise ValueError('The bathymetry grid and soil grid cannot yet be plotted at the same time. Use plot_bathymetry_contours=True instead')
             if len(self.grid_x) > 1 and len(self.grid_y) > 1:
                 
                 X, Y = np.meshgrid(self.grid_x, self.grid_y)
@@ -2236,9 +2401,36 @@ class Project():
                     cbar = plt.colorbar(contourf, ax=ax, fraction=0.04, label='Water Depth (m)', format=tkr.FormatStrFormatter('%.0f'))
 
 
+        if plot_seabed_slope:
+            if len(self.grid_x) > 1 and len(self.grid_y) > 1:
+                if self.grid_slope is None:
+                    self.computeSlopeGrid()
+                X, Y = np.meshgrid(self.grid_x, self.grid_y)
+                slope_deg = self.grid_slope.copy()
+                slope_levels = kwargs.get('slope_levels', 20)
+                slope_cmap = kwargs.get('slope_cmap', 'RdYlGn_r')
+                #slope_cmap = kwargs.get('slope_cmap', 'YlOrRd')
+                slope_vmin = kwargs.get('slope_vmin', -2.5)
+                slope_vmax = kwargs.get('slope_vmax', 27.5)
+                slope_threshold = kwargs.get('slope_threshold', None)
+                if slope_threshold is not None:
+                    slope_deg = np.ma.masked_where(slope_deg < slope_threshold, slope_deg)
+                if slope_vmin is not None or slope_vmax is not None:
+                    vmin = slope_vmin if slope_vmin is not None else np.min(slope_deg)
+                    vmax = slope_vmax if slope_vmax is not None else np.max(slope_deg)
+                    slope_deg = np.clip(slope_deg, vmin, vmax)
+                    contourf_slope = ax.contourf(X, Y, slope_deg, levels=slope_levels, cmap=slope_cmap, vmin=vmin, vmax=vmax)
+                    contourf_slope.set_clim(vmin, vmax)
+                else:
+                    contourf_slope = ax.contourf(X, Y, slope_deg, levels=slope_levels, cmap=slope_cmap)
+                if not bare:
+                    import matplotlib.ticker as tkr
+                    plt.colorbar(contourf_slope, ax=ax, fraction=0.04, label='Seabed Slope (°)', format=tkr.FormatStrFormatter('%.1f'))
+
+
         if plot_soil:
             if plot_bathymetry:
-                raise ValueError('The bathymetry grid and soil grid cannot yet be plotted at the same time. Use plot_bathy_contours=True instead')
+                raise ValueError('The bathymetry grid and soil grid cannot yet be plotted at the same time. Use plot_bathymetry_contours=True instead')
 
             soil_types = np.unique(self.soil_names).tolist()
             if not cmap_soil:
@@ -2286,6 +2478,100 @@ class Project():
                 for ez in self.exclusion:
                     ax.plot(ez[:,0], ez[:,1], 'r-.', label='Exclusion Zone')
             
+        if plot_species and self.species_data is not None:
+            from matplotlib.patches import Circle as MplCircle
+            from matplotlib.collections import PatchCollection
+            import matplotlib.patches as mpatches
+            
+            sd = self.species_data
+            categories = sd['VernacularNameCategory'].unique()
+            
+            # NOAA-style category colors with fallback colormap
+            species_colors = kwargs.get('species_colors', {
+                'gorgonian coral'          : (245/256,  54/256, 54/256),
+                'black coral'              : (0.05, 0.05, 0.05),
+                'demosponge'               : (227/256,  213/256,  117/256),
+                'sea pen'                  : (143/256,  146/256,  204/256),
+                'glass sponge'             : (120/256,  240/256, 206/256),
+                'stoloniferan coral'       : (175/256, 235/256, 91/256),
+                'soft coral'               : (0.5,  0.5,  0.5),
+                'stony coral (unspecified)': (0.5,  0.5,  0.5),
+                'fish'                     : (0.5,  0.5,  0.5),
+                'other'                    : (0.5,  0.5,  0.5),
+            })
+            cmap_sp = plt.cm.get_cmap('tab20', len(categories))
+            # build color lookup: case-insensitive match, fallback to colormap
+            sp_lower = {k.lower(): v for k, v in species_colors.items()}
+            cat_colors = {cat: sp_lower.get(cat.strip().lower(), cmap_sp(i)[:3])
+                          for i, cat in enumerate(categories)}
+            
+            radius_buffer = kwargs.get('species_radius_buffer', 152)
+            
+            # pre-extract arrays for fast access
+            xs_sp = sd['x_local'].values
+            ys_sp = sd['y_local'].values
+            accuracies = np.nan_to_num(sd['accuracy_m'].values, nan=100.0)
+            
+            # accuracy score: 1.0 = smallest (best), 0.0 = largest (worst)
+            acc_range = accuracies.max() - accuracies.min()
+            acc_score = 1.0 - (accuracies - accuracies.min()) / acc_range if acc_range > 0 else np.ones(len(sd))
+            
+            # date score: 1.0 = most recent, 0.0 = oldest
+            dates = sd['obs_date']
+            valid = dates.notna()
+            date_score = np.full(len(sd), 0.5)
+            if valid.any():
+                elapsed = (dates - dates[valid].min()).dt.total_seconds().values
+                date_range = (dates[valid].max() - dates[valid].min()).total_seconds()
+                if date_range > 0:
+                    date_score = np.where(np.isnan(elapsed), 0.5, elapsed / date_range)
+            
+            # combined alpha: [0.15, 0.85]
+            alphas = 0.15 + 0.7 * (0.5 * date_score + 0.5 * acc_score)
+            
+            # radii and draw order (largest first so smaller circles draw on top)
+            radii = accuracies + radius_buffer
+            sort_idx = np.argsort(-radii)
+            cat_values = sd['VernacularNameCategory'].values
+            
+            # draw two PatchCollections per category: outer (accuracy+buffer) and inner (buffer only)
+            for cat in categories:
+                color = cat_colors[cat]
+                cat_indices = sort_idx[cat_values[sort_idx] == cat]
+                if len(cat_indices) == 0:
+                    continue
+                
+                for is_inner in [False, True]:
+                    r = np.full(len(cat_indices), radius_buffer) if is_inner else radii[cat_indices]
+                    alpha_bump = 0.15 if is_inner else 0.0
+                    
+                    patches = [MplCircle((xs_sp[j], ys_sp[j]), r[k])
+                               for k, j in enumerate(cat_indices)]
+                    fc = [(*color, min(alphas[j] + alpha_bump, 1.0)) for j in cat_indices]
+                    ec = [(*color, min(alphas[j] + alpha_bump + 0.1, 1.0)) for j in cat_indices]
+                    
+                    pc = PatchCollection(patches, match_original=False)
+                    pc.set_facecolor(fc)
+                    pc.set_edgecolor(ec)
+                    pc.set_linewidth(0.3)
+                    if not is_inner:
+                        pc.set_label(cat)
+                    ax.add_collection(pc)
+            
+            # separate figure for species legend
+            legend_handles = [mpatches.Patch(facecolor=(*cat_colors[c], 0.7),
+                                             edgecolor=(*cat_colors[c], 1.0), label=c)
+                              for c in categories]
+            fig_leg, ax_leg = plt.subplots(figsize=(3, len(categories) * 0.3 + 0.5))
+            ax_leg.axis('off')
+            ax_leg.legend(handles=legend_handles,
+                          title='Species Categories',
+                          loc='center',
+                          fontsize='small',
+                          title_fontsize='small',
+                          framealpha=0.9)
+            fig_leg.tight_layout()
+
         
         # Seabed ground/soil type (to update)
         #X, Y = np.meshgrid(self.soil_x, self.soil_y)
@@ -2363,7 +2649,7 @@ class Project():
                             label='Mooring Line')
 
         # ---- Add colorbar for line depth ----
-        if line_depth_settings is not None and not bare:
+        if plot_moorings and line_depth_settings is not None and not bare:
             import matplotlib
             import matplotlib.colors as mcolors
             sm = cm.ScalarMappable(cmap=matplotlib.colormaps.get_cmap(line_depth_settings["cmap"]),
@@ -2463,6 +2749,23 @@ class Project():
         ax.set_xlabel('X (m)')
         ax.set_ylabel('Y (m)')
 
+        # set axis limits if provided
+        xlim = kwargs.get('xlim', None)
+        ylim = kwargs.get('ylim', None)
+        zoom_boundary = kwargs.get('zoom_boundary', False)
+        boundary_buffer = kwargs.get('boundary_buffer', 2500)
+        
+        if zoom_boundary and len(self.boundary) > 1:
+            xlim = (np.min(self.boundary[:,0]) - boundary_buffer,
+                    np.max(self.boundary[:,0]) + boundary_buffer)
+            ylim = (np.min(self.boundary[:,1]) - boundary_buffer,
+                    np.max(self.boundary[:,1]) + boundary_buffer)
+        
+        if xlim is not None:
+            ax.set_xlim(xlim)
+        if ylim is not None:
+            ax.set_ylim(ylim)
+        
         if axis_equal:
             ax.set_aspect('equal',adjustable='box')
 
@@ -2475,7 +2778,12 @@ class Project():
         by_label = dict(zip(labels, handles))  # Removing duplicate labels
         
         if plot_legend:
-            ax.legend(by_label.values(), by_label.keys(),loc='upper center',bbox_to_anchor=(legend_x, legend_y), fancybox=True, ncol=4)
+            # dynamically choose ncol based on figure width
+            fig_width_in = fig.get_size_inches()[0]
+            n_items = len(by_label)
+            ncol = kwargs.get('legend_ncol', max(1, min(n_items, int(fig_width_in / 2.5))))
+            ax.legend(by_label.values(), by_label.keys(),loc='upper center',bbox_to_anchor=(legend_x, legend_y), fancybox=True, ncol=ncol)
+            fig.subplots_adjust(bottom=0.2)  # make room for below-axes legend
         if save:
             counter = 1
             output_filename = f'2dfarm_{counter}.png'
@@ -2497,7 +2805,7 @@ class Project():
     def plot3d(self, ax=None, figsize=(10,8), plot_fowt=False, save=False,
                plot_boundary=True, plot_boundary_on_bath=True, args_bath={}, 
                plot_axes=True, plot_bathymetry=True, plot_soil=False, color=None,
-               colorbar=True, boundary_only=False, plot_bathy_contours=False,
+               colorbar=True, boundary_only=False, plot_bathymetry_contours=False,
                **kwargs):
         '''Plot aspects of the Project object in matplotlib in 3D.
         
@@ -2561,6 +2869,8 @@ class Project():
         orientation = kwargs.get('orientation',[20, -130])
         maxcableSize = kwargs.get('maxcableSize', None)    
         plot_legend = kwargs.get('plot_legend', False)
+        depth_vmin = kwargs.get('depth_vmin', None)
+        depth_vmax = kwargs.get('depth_vmax', None)
 
 
         # if axes not passed in, make a new figure
@@ -2579,12 +2889,11 @@ class Project():
             else:
                 if not args_bath:
                     cmap = cm.gist_earth
-                    # set vmax based on bathymetry, if > 0 set max = 0
-                    vmax = max([max(x) for x in -self.grid_depth])
-                    if vmax > 0:
-                        vmax = 0
-                    args_bath = {'cmap': cmap, 'vmin':min([min(x) for x in -self.grid_depth]),
-                                 'vmax': vmax}
+                    # set depth range based on user input or data
+                    vmin = depth_vmin if depth_vmin is not None else np.min(self.grid_depth)
+                    vmax = depth_vmax if depth_vmax is not None else np.max(self.grid_depth)
+                    # negate to match negated plot_depths
+                    args_bath = {'cmap': cmap, 'vmin': -vmax, 'vmax': -vmin}
                 
                 if boundary_only:   # if you only want to plot the bathymetry that's underneath the boundary, rather than the whole file
                     self.trimGrids()
@@ -2598,6 +2907,7 @@ class Project():
                 # plot the bathymetry in matplotlib using a plot_surface
                 X, Y = np.meshgrid(self.grid_x, self.grid_y)  # 2D mesh of seabed grid
                 plot_depths = -self.grid_depth
+                plot_depths = np.clip(plot_depths, -vmax, -vmin)
                 '''
                 # interpolate soil rockyness factor onto this grid
                 xs = self.grid_x
@@ -2770,7 +3080,9 @@ class Project():
             #     fowt.plot(ax, zorder=20)
         
         # Show full depth range
-        if len(self.grid_depth)>1:
+        if depth_vmax is not None:
+            ax.set_zlim([-depth_vmax, 0])
+        elif len(self.grid_depth)>1:
             ax.set_zlim([-np.max(self.grid_depth), 0])
         else:
             ax.set_zlim([-self.depth,0])

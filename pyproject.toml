@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fad-toolset"
-version = "1.0.0"
+version = "1.0.1"
 description = "A floating array modeling library"
 license = {file = "LICENSE"}
 readme = "README.md"
@@ -41,8 +41,8 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/FloatingArrayDesign/FAD-Toolset"
 
-[tool.setuptools]
-packages = ["fad"]
+[tool.setuptools.packages.find]
+include = ["fad*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.txt", "*.md", "*.yaml"]

@@ -146,4 +146,8 @@ See [helpers](./fad/helpers.py) for the full list of yaml writing capabilities.
 
 ## Authors
 
-The NREL Floating Wind Array Design team.
+The NLR Floating Array Design team
+
+## Software Record
+
+This toolset corresponds to NLR Software Record SWR-26-056.

@@ -959,7 +959,7 @@ class LinearSystem():
         
         # plotting
             
-        if True: #((res['success'] == False and display >0) or display > 1) and self.nPtfm>1:  # plot the optimization if it's likely desired
+        if False: #((res['success'] == False and display >0) or display > 1) and self.nPtfm>1:  # plot the optimization if it's likely desired
             
             n = len(kls)
             fig, ax = plt.subplots(n+3, 1, sharex=True)
@@ -1213,25 +1213,37 @@ class LinearSystem():
 
         
         
-        # # plot each mooring line, colored differently for each line type 
+        # plot each mooring line, with perpendicular offset for overlapping lines
+        # (overlapping lines share the same endpoint coordinates, e.g. SSLP anchors
+        #  co-located with their platform)
+        _seen_edges = {}   # frozenset{rounded_p1, rounded_p2} → times already drawn
+
+        def _overlap_offset(p1, p2, offset_mag=100):
+            """Return perpendicular offset vector for the next duplicate of this edge."""
+            key = frozenset([tuple(np.round(p1[:2], 0).astype(int)),
+                             tuple(np.round(p2[:2], 0).astype(int))])
+            count = _seen_edges.get(key, 0)
+            _seen_edges[key] = count + 1
+            if count == 0:
+                return np.zeros(2)
+            d = p2[:2] - p1[:2]
+            L = np.linalg.norm(d)
+            if L == 0:
+                return np.zeros(2)
+            perp = np.array([-d[1], d[0]]) / L
+            return count * offset_mag * perp
+
         for i in range(n):
-            
-            # shousner: I don't understand how the j var found an integer
-            #j = int(Line.type[4:])-1     # index of LineType
             ii = self.group[i]-1
-            
             shared = self.mooringGroups[ii]['shared']==1
-            
             rA = self.rA[i]
             rB = self.rB[i]
-            
-
 
             if not (show_lines=="none" or (show_lines=="anch" and shared) or (show_lines=="shared" and not shared)):
-                if self.boundary[i]:
-                    l, = ax.plot([rA[0], rB[0]],[rA[1], rB[1]], color=colors[i], linestyle='--', lw=thicks[i])
-                else:
-                    l, = ax.plot([rA[0], rB[0]],[rA[1], rB[1]], color=colors[i], linestyle=styles[i], lw=thicks[i])
+                off = _overlap_offset(rA, rB)
+                linestyle_i = '--' if self.boundary[i] else styles[i]
+                ax.plot([rA[0]+off[0], rB[0]+off[0]], [rA[1]+off[1], rB[1]+off[1]],
+                        color=colors[i], linestyle=linestyle_i, lw=thicks[i])
                 if 'l' in labels:
                     coord = 0.5*(rA + rB)  # position label at midpoint between line ends
                     ax.text(coord[0], coord[1], f"{i+1}", bbox=dict(facecolor='none', edgecolor='k'))                      
@@ -1246,9 +1258,9 @@ class LinearSystem():
                 else:
                     raise ValueError("An axes to put the colorbar beside must be provided (as 'cbax') when colorbar=2")
                     
-            elif colorbar == 1:                           # make a regular colorbar on the current axes                
-                cax = plt.gca().inset_axes([1.1, 0, 0.05, 1])
-                plt.gcf().colorbar(s_m, label=colorbar_label, cax=cax)
+            elif colorbar == 1:                           # make a regular colorbar on the current axes
+                cax = ax.inset_axes([1.1, 0, 0.05, 1])
+                fig.colorbar(s_m, label=colorbar_label, cax=cax)
             elif colorbar == 0:                           # don't make a colorbar
                 pass         
             else:

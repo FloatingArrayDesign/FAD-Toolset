@@ -922,7 +922,7 @@ def loadMooringConfig(line_config, connectorTypes, lineTypes,
 
     '''
     
-    from famodel.helpers import MooringProps
+    from fad.helpers import MooringProps
     
     # set up dictionary of information on the mooring configurations
     dd = {'span':{},'zAnchor':{}}#,'EndPositions':{}}
@@ -1055,7 +1055,7 @@ def loadMooringConfig(line_config, connectorTypes, lineTypes,
             raise Exception(f"Please make sure that all section entries for line configuration '{lcID}' are either line sections (which must have a 'type' key), connectors (which must have a 'connectorType' key, or subsections")
 
     # check if line is a shared symmetrical configuration
-    if 'symmetric' in lineConfigs[lcID] and lineConfigs[lcID]['symmetric']:
+    if 'symmetric' in line_config and line_config['symmetric']:
         dd['symmetric'] = True # flag line as symmetric so that mooring.mirror() is called at initialization
         # if not lineLast: # check if last item in line config list was a connector
         #     for ii in range(len(config)):

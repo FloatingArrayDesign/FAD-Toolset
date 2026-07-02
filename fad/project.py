@@ -5696,7 +5696,7 @@ if __name__ == '__main__':
     
 
     # point to location of yaml file with uniform array info
-    filename = '../Examples/OntologySample600m_shared.yaml' # yaml file for project
+    filename = '../Examples/OntologySample200m.yaml' # yaml file for project
 
     # load in yaml
     project = Project(file=filename, raft=False)

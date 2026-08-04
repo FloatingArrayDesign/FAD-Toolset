@@ -109,7 +109,7 @@ class LinearSystem():
         self.rB = []            # coordinates of the connected lines at end B
         self.angA = []                  # offset angles (deg about yaw axis) of fairlead attachment on platform [deg]
         self.angB = []
-        self.boundary = []             # a boolean to check if the line is a boundary (inter-cell) line
+        self.inter_cell_line = []             # a boolean to check if the line is a boundary (inter-cell) line
         # parameters
         self.depth = depth
         self.fmax = fmax
@@ -165,12 +165,12 @@ class LinearSystem():
                         percent_droop = 50
                     
                     if shared==0:  # anchored
-                        self.mooringGroups.append(dict(type=i+1, ten=self.inits['tenA'], kl=self.inits['klA'], w=self.inits['w'], shared=shared, net=False, cost=1))
+                        self.mooringGroups.append(dict(type=i+1, ten=self.inits['ten'], kl=self.inits['kl'], w=self.inits['w'], shared=shared, net=False, cost=1))
                     elif shared==1:  # shared or hybrid (net)
                         if net:
-                            self.mooringGroups.append(dict(type=i+1, ten=self.inits['tenS'], kl=self.inits['klS'], w=self.inits['w'], shared=shared, percent_droop=percent_droop, net=net, tendON=tendON, tenTen=self.inits['tenTen'], intersectDeg=intersectDeg, cost=1))    
+                            self.mooringGroups.append(dict(type=i+1, ten=self.inits['ten'], kl=self.inits['kl'], w=self.inits['w'], shared=shared, percent_droop=percent_droop, net=net, tendON=tendON, tenTen=self.inits['tenTen'], intersectDeg=intersectDeg, cost=1))    
                         else:
-                            self.mooringGroups.append(dict(type=i+1, ten=self.inits['tenS'], kl=self.inits['klS'], w=self.inits['w'], shared=shared, percent_droop=percent_droop, net=net, cost=1))
+                            self.mooringGroups.append(dict(type=i+1, ten=self.inits['ten'], kl=self.inits['kl'], w=self.inits['w'], shared=shared, percent_droop=percent_droop, net=net, cost=1))
                 else:
                     self.mooringGroups.append(dict(type=i+1, kl=100, ten=1000, w=1500, tenTen=1000, shared=shared, net=False, cost=1))  
         
@@ -246,7 +246,7 @@ class LinearSystem():
                     self.rB.append(self.coords[iB, :])
                     self.angA.append(0.0)  # to be handled later <<<<<<<
                     self.angB.append(0.0)
-                    self.boundary.append(False)
+                    self.inter_cell_line.append(False)
                     # fill in ratios in the corresponding line design for convenience - eventually need to check/enforce consistency <<<<
                     mg = self.mooringGroups[k-1]
                     shared = mg['shared']
@@ -268,59 +268,36 @@ class LinearSystem():
                 interMat = np.array(interMat)
                 interCoord = np.array(interCoord)
                 for iA in range(self.nPtfm):
-                    for iB in range(iA):        
+                    for iB in range(self.nPtfm):        
                         if iA < self.nPtfm and iB < self.nPtfm:
                             b = int(interMat[iA, iB])
                             if b > 0:
-                                intercenter = self.center + interCoord
-                                rotMat = np.array([[np.cos(np.pi), -np.sin(np.pi)], 
-                                                [np.sin(np.pi),  np.cos(np.pi)]])
-                                intercenterp = np.matmul(rotMat, intercenter)
-                                intercoordsiB = intercenter + (self.coords[iB, :] - self.center)
-                                intercoordsiA = intercenter + (self.coords[iA, :] - self.center)
-                                intercoordsiBp = intercenterp + (self.coords[iB, :] - self.center)
-                                intercoordsiAp = intercenterp + (self.coords[iA, :] - self.center)
-                                # compute both distances and choose the smallest one 
-                                drBA = intercoordsiB - self.coords[iA,:]
-                                lBA = np.linalg.norm(drBA)
-                                drBAp = intercoordsiBp - self.coords[iA,:]
-                                lBAp = np.linalg.norm(drBAp)
-                                if lBAp > lBA:
-                                    dr = drBA
-                                    # not that it matters but for consistency, choose the right A and B:
-                                    self.endA.append(iA)
-                                    self.endB.append(iB)   
-                                    self.rA.append(self.coords[iA, :])                         
-                                    self.rB.append(intercoordsiB)
 
-                                    self.endA.append(iB)
-                                    self.endB.append(iA)   
-                                    self.rA.append(self.coords[iB, :])                         
-                                    self.rB.append(intercoordsiAp)
-                                else:
-                                    dr = drBAp
-                                    self.endA.append(iA)
-                                    self.endB.append(iB)
-                                    self.rA.append(self.coords[iA, :])                         
-                                    self.rB.append(intercoordsiBp)       
+                                intercoordsiB = interCoord + self.coords[iB, :]
+                                dr = intercoordsiB - self.coords[iA,:]
+                                self.endA.append(iA)
+                                self.endB.append(iB)   
+                                self.rA.append(self.coords[iA, :])                         
+                                self.rB.append(intercoordsiB)
 
-                                    self.endA.append(iB)
-                                    self.endB.append(iA)
-                                    self.rA.append(self.coords[iB, :])                         
-                                    self.rB.append(intercoordsiA)                         
+                                # self.endA.append(iB)
+                                # self.endB.append(iA)   
+                                # self.rA.append(self.coords[iB, :])                         
+                                # self.rB.append(intercoordsiAp)
+                       
                                 l = np.linalg.norm(dr)
                                 self.l.append(l)
-                                self.l.append(l)
+                                # self.l.append(l)  # no more mirroring the line. We only mirror for plotting.
                                 self.u.append(dr/l)
-                                self.u.append(-dr/l)
+                                # self.u.append(-dr/l)
                                 self.group.append(b)
-                                self.group.append(b)
+                                # self.group.append(b)
                                 self.angA.append(0.0)
-                                self.angB.append(0.0)
+                                # self.angB.append(0.0)
                                 self.angA.append(0.0)
-                                self.angB.append(0.0)                            
-                                self.boundary.append(True)
-                                self.boundary.append(True)
+                                # self.angB.append(0.0)                            
+                                self.inter_cell_line.append(True)
+                                # self.inter_cell_line.append(True)
                                 # not sure about this part:
                                 mg = self.mooringGroups[b-1]
                                 shared = mg['shared']
@@ -335,7 +312,7 @@ class LinearSystem():
                                 mg['dl`_min'] = -xmax  
                     
             
-            print("end of intermat setup?")
+            print("end of intermat setup")
 
         self.nLines = len(self.l)
         
@@ -401,8 +378,8 @@ class LinearSystem():
             else:  # NEW - USING TENSIONS DIRECTLY RATHER THAN WEIGHT RATIOS
                 self.TensionMatrix[j, i] = self.mooringGroups[i]['ten']
                 
-            if self.boundary[j]:
-                self.TensionMatrix[j, i] *= 0.5  #MH: this seems suspect <<<
+            # if self.inter_cell_line[j]:
+            #     self.TensionMatrix[j, i] *= 0.5  #MH: this seems suspect <<<  #RA: since we do not mirror the inter-cell line anymore, we don't multiply by 0.5 anymore. 
         
         
         
@@ -410,10 +387,10 @@ class LinearSystem():
         '''based on structure and tension matrices, calculatesd self.Knobs_k, which is used by c_to_k when optimizing stiffness.'''
     
         # Null space of Structure Matrix
-        N1 = scipy.linalg.null_space(self.StructureMatrix, rcond=rcond)
+        N1 = scipy.linalg.null_space(self.StructureMatrix)#, rcond=rcond)
         
         # null space of N1 augmented with tension matrix 
-        N2 = scipy.linalg.null_space(np.hstack([N1, -self.TensionMatrix]), rcond=rcond)
+        N2 = scipy.linalg.null_space(np.hstack([N1, -self.TensionMatrix]))#, rcond=rcond)
         #N2 = scipy.linalg.null_space(np.append(N1, -self.TensionMatrix,1))#, rcond = 0.0001)
         
         # nullspace matrix containing basis vectors of valid line weight solutions for equilibrium given line groupings 
@@ -523,7 +500,7 @@ class LinearSystem():
             
             '''
             # >>> MH: this part may be for hybrid shared moorings >>>
-            boundaryLineCounti = np.sum(self.boundary[:j])
+            boundaryLineCounti = np.sum(self.inter_cell_line[:j])
             if boundaryLineCounti % 2 == 0:  # only count the stiffness of the boundary line once
                 self.SystemStiffness[iA*2:iA*2+2, iA*2:iA*2+2] += K_sum[:2,:2]
                 self.SystemStiffness[iB*2:iB*2+2, iB*2:iB*2+2] += K_sum[2:,2:]
@@ -674,7 +651,7 @@ class LinearSystem():
             print('weight basis vectors are:')
             print(self.wBasis)
         
-        def dopt_fun(q):
+        def dopt_fun(q, args=[]):
             '''evaluation function for the dopt solver. This function includes both 
             design variables and constraints. This function inputs q which is an array of knob values.
             '''
@@ -959,7 +936,7 @@ class LinearSystem():
         
         # plotting
             
-        if False: #((res['success'] == False and display >0) or display > 1) and self.nPtfm>1:  # plot the optimization if it's likely desired
+        if True: #((res['success'] == False and display >0) or display > 1) and self.nPtfm>1:  # plot the optimization if it's likely desired
             
             n = len(kls)
             fig, ax = plt.subplots(n+3, 1, sharex=True)
@@ -1241,13 +1218,24 @@ class LinearSystem():
 
             if not (show_lines=="none" or (show_lines=="anch" and shared) or (show_lines=="shared" and not shared)):
                 off = _overlap_offset(rA, rB)
-                linestyle_i = '--' if self.boundary[i] else styles[i]
+                linestyle_i = '--' if self.inter_cell_line[i] else styles[i]
                 ax.plot([rA[0]+off[0], rB[0]+off[0]], [rA[1]+off[1], rB[1]+off[1]],
                         color=colors[i], linestyle=linestyle_i, lw=thicks[i])
                 if 'l' in labels:
                     coord = 0.5*(rA + rB)  # position label at midpoint between line ends
-                    ax.text(coord[0], coord[1], f"{i+1}", bbox=dict(facecolor='none', edgecolor='k'))                      
-                
+                    ax.text(coord[0], coord[1], f"{i+1}", bbox=dict(facecolor='none', edgecolor='k'))
+
+                if self.inter_cell_line[i]:
+                    # mirror the inter-cell line about the array center (equivalent to the
+                    # commented-out endA/endB/rA/rB block in initialize.
+                    rA_m = self.coords[self.endB[i], :]  # _m for mirrored.
+                    rB_m = rA + rA_m - rB - 2*np.array(self.center)
+                    off_m = _overlap_offset(rA_m, rB_m)
+                    ax.plot([rA_m[0]+off_m[0], rB_m[0]+off_m[0]], [rA_m[1]+off_m[1], rB_m[1]+off_m[1]],
+                            color=colors[i], linestyle='--', lw=thicks[i])
+                    if 'l' in labels:
+                        coord_m = 0.5*(rA_m + rB_m)
+                        ax.text(coord_m[0], coord_m[1], f"{i+1}", bbox=dict(facecolor='none', edgecolor='k'))
                 
         # display colorbar   
         if not line_val in ["uniform", "two", "groups"]:
@@ -1803,7 +1791,7 @@ class LinearSystem():
         for i in range(self.nPtfm):
             connectedLines = np.where(np.abs(self.StructureMatrix[i*2:i*2+1, :]) > 0)[1]
             for j in connectedLines:
-                if self.boundary[j]:
+                if self.inter_cell_line[j]:
                     lineYawStiffness = self.mooringGroups[self.group[j] - 1]['ten']/(2*self.l[j]) * rf**2    
                 else:
                     lineYawStiffness = self.mooringGroups[self.group[j] - 1]['ten']/self.l[j] * rf**2
@@ -1836,7 +1824,7 @@ class LinearSystem():
         index_mapping = {old: new for new, old in enumerate(keep_indices)}        
 
         # remove lines that belong to redundant mooring groups
-        new_l, new_u, new_endA, new_endB, new_rA, new_rB, new_angA, new_angB, new_boundary, new_group = [], [], [], [], [], [], [], [], [], []
+        new_l, new_u, new_endA, new_endB, new_rA, new_rB, new_angA, new_angB, new_inter_cell_line, new_group = [], [], [], [], [], [], [], [], [], []
         
         for i in range(len(self.l)):
             if self.group[i] - 1 in keep_indices:  # subtract 1 because group starts at 1, not 0
@@ -1849,7 +1837,7 @@ class LinearSystem():
                 new_rB.append(self.rB[i])
                 new_angA.append(self.angA[i])
                 new_angB.append(self.angB[i])
-                new_boundary.append(self.boundary[i])
+                new_inter_cell_line.append(self.inter_cell_line[i])
 
         # remove from intra-cell adjacency matrix
         for remIdx in remove_indices:
@@ -1872,7 +1860,7 @@ class LinearSystem():
         self.rB = new_rB
         self.angA = new_angA
         self.angB = new_angB
-        self.boundary = new_boundary
+        self.inter_cell_line = new_inter_cell_line
         self.group = new_group
         self.nLines = len(self.l)
         self.StructureMatrix = np.zeros([2*self.nPtfm, self.nLines])     # rows: DOFs; columns: lines
